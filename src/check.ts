@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { parseNow, parsePrNumber } from "./env.ts";
 import { fetchPrClaims, githubOptionsFromEnv } from "./github.ts";
 import { loadBase, loadHead, loadReadme } from "./load.ts";
 import { type CheckInput, checkRfcs, type Violation } from "./rules.ts";
@@ -16,9 +17,9 @@ function parseArgs(argv: string[], env: Record<string, string | undefined>): Opt
     const flag = argv[i];
     if (flag?.startsWith("--")) args.set(flag.slice(2), argv[++i] ?? "");
   }
-  const nowText = args.get("now") ?? env.RFC_CHECK_NOW;
-  const now = nowText ? new Date(nowText) : new Date();
-  if (Number.isNaN(now.getTime())) throw new Error(`--now is not a timestamp: ${nowText}`);
+  const now = args.has("now")
+    ? parseNow(args.get("now"), "--now")
+    : parseNow(env.RFC_CHECK_NOW, "RFC_CHECK_NOW");
   return {
     root: args.get("root") ?? process.cwd(),
     now,
@@ -29,12 +30,21 @@ function parseArgs(argv: string[], env: Record<string, string | undefined>): Opt
 
 /** The number of the pull request this run checks, from the Actions event or `RFC_PR_NUMBER`. */
 export function pullRequestNumber(env: Record<string, string | undefined>): number | null {
-  if (env.RFC_PR_NUMBER) return Number(env.RFC_PR_NUMBER);
-  if (env.GITHUB_EVENT_NAME !== "pull_request" || !env.GITHUB_EVENT_PATH) return null;
+  if (env.RFC_PR_NUMBER) return parsePrNumber(env.RFC_PR_NUMBER);
+  if (env.GITHUB_EVENT_NAME !== "pull_request") return null;
+  // On a pull_request event the number must be found: a check that cannot tell which pull
+  // request it is checking would skip the number rule, so it fails instead.
+  if (!env.GITHUB_EVENT_PATH) {
+    throw new Error("pull_request event without GITHUB_EVENT_PATH: cannot find the pull request");
+  }
   const event = JSON.parse(readFileSync(env.GITHUB_EVENT_PATH, "utf8")) as {
-    pull_request?: { number?: number };
+    pull_request?: { number?: unknown };
   };
-  return event.pull_request?.number ?? null;
+  const number = event.pull_request?.number;
+  if (typeof number !== "number" || !Number.isInteger(number) || number < 1) {
+    throw new Error("pull_request event without a pull request number");
+  }
+  return number;
 }
 
 export interface CheckReport {
@@ -52,8 +62,11 @@ export async function runCheck(
   const head = loadHead(options.root);
 
   let base: CheckInput["base"] = null;
+  let baseUnreadable: CheckInput["baseUnreadable"] = [];
   if (options.baseRef !== null) {
-    base = loadBase(options.root, options.baseRef).files;
+    const loaded = loadBase(options.root, options.baseRef);
+    base = loaded.files;
+    baseUnreadable = loaded.unreadable;
   } else if (inActions) {
     throw new Error("RFC_BASE_REF is not set: the check must see the base branch to compare");
   } else {
@@ -74,6 +87,7 @@ export async function runCheck(
     head: head.files,
     unreadable: head.unreadable,
     base,
+    baseUnreadable,
     now: options.now,
     readme: loadReadme(options.root),
     claims,

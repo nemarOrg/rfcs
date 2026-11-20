@@ -23,6 +23,8 @@ export interface CheckInput {
   head: RfcFile[];
   /** Files that could not be read at the head. */
   unreadable?: UnreadableFile[];
+  /** Files on the base branch that could not be read; each is a violation unless the head repairs it. */
+  baseUnreadable?: UnreadableFile[];
   /** The records on the base branch, or null when there is no base to compare with. */
   base: RfcFile[] | null;
   /** The check's own clock; no date written in a record is used in its place. */
@@ -75,6 +77,16 @@ export function checkRfcs(input: CheckInput): Violation[] {
 
   for (const bad of input.unreadable ?? []) {
     for (const problem of bad.problems) report("front-matter", bad.path, problem);
+  }
+
+  for (const bad of input.baseUnreadable ?? []) {
+    if (!head.some((file) => file.path === bad.path)) {
+      report(
+        "base-unreadable",
+        bad.path,
+        `the base branch's copy cannot be read (${bad.problems.join("; ")}), so it cannot be compared with`,
+      ); // rule: base-unreadable
+    }
   }
 
   const headNumbers = new Set(head.map((file) => file.record.number));
@@ -170,9 +182,9 @@ export function checkRfcs(input: CheckInput): Violation[] {
       ); // rule: one-extension
     }
     if (
-      b !== null &&
+      base !== null &&
       ext !== null &&
-      !sameJson(b.record.extension, ext) &&
+      !sameJson(b?.record.extension ?? null, ext) &&
       baseClose !== null &&
       nowMs >= baseClose
     ) {
