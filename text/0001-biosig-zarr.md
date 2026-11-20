@@ -441,7 +441,7 @@ Each layer is a refusal rule that a conformance case can test: the case passes w
 4. **Within a uniform group.**
    A reader that does not implement `start_time`, `valid_intervals` or `missing_value` MUST refuse a group where that attribute is in effect, with an error that names it.
    `start_time` is in effect when it is not 0.
-   `valid_intervals` is in effect when it holds more than one interval, or when any interval's `source_time` is `null`.
+   `valid_intervals` is in effect when it holds more than one interval.
    `missing_value` is in effect when it is not `null` on level 0.
 
 When the RFC opens, the conformance suite in nemarOrg/biosig-zarr has at least one such case for each of the four layers.
