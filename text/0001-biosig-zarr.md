@@ -449,12 +449,10 @@ When the RFC opens, the conformance suite in nemarOrg/biosig-zarr has at least o
 #### Events and the onset-to-sample rule
 
 - For a `uniform` group, the sample nearest an onset is `i = floor((onset - start_time) * rate + 0.5)`.
-  If `i` falls outside the array, or the onset falls outside the acquired time of every valid interval (below), the event has no sample in that group, and a reader MUST say so instead of clamping.
+  If `i` falls outside `[0, n_samples)`, or outside every valid interval, the event has no sample in that group, and a reader MUST say so instead of clamping.
+  Intervals are half-open in sample indices: sample `i` is acquired when `start <= i < stop` for some interval.
   An event with no sample keeps its onset.
   This closes version 2 open question 16.
-- The acquired time of an interval is the half-open span `[t, t + (stop - start) / rate)`,
-  where `t` is its `source_time`, or `start_time + start / rate` when `source_time` is `null`.
-  A reader MUST test the onset against this span, not only test `i` against `[start, stop)`, because placing an interval on the grid can round its first sample onto a grid point earlier than its source time.
 - For a `timestamped` group, it is the first `i` with `time[i] >= onset`.
 - The `events` group gains a required attribute `onset_source_basis`:
   `"timeline"` (the source gave onsets on the recording timeline, as EDF+ annotations do),
@@ -462,11 +460,16 @@ When the RFC opens, the conformance suite in nemarOrg/biosig-zarr has at least o
   or `"unknown"`.
   With more than one interval, a reader needs this attribute to align events correctly.
 
-A required conformance case tests the span rule.
-A uniform group at 10 Hz has `start_time` 0 and two intervals: `{ "start": 0, "stop": 20, "source_time": 0.0 }`, acquired from 0.00 to 2.00 seconds,
-and `{ "start": 20, "stop": 40, "source_time": 2.04 }`, placed at grid index `round(2.04 * 10) = 20`, so there is a known acquisition gap from 2.00 to 2.04 seconds.
+A required conformance case tests this rule.
+A uniform group at 10 Hz has `start_time` 0 and the intervals `{ "start": 0, "stop": 20, "source_time": 0.0 }` and `{ "start": 24, "stop": 40, "source_time": 2.4 }`,
+so samples 20 to 23 were not acquired and the gap runs from 2.00 to 2.40 seconds.
 An event at 2.02 seconds keeps its onset of 2.02 seconds, and a reader MUST return no acquired sample for it,
-even though `floor(2.02 * 10 + 0.5) = 20` is a valid grid index inside the second interval.
+even though nearest-index rounding, `floor(2.02 * 10 + 0.5) = 20`, gives a grid index inside the array.
+
+A gap on the grid is at least one sample long.
+A gap shorter than one sample period cannot be represented in `valid_intervals`, because intervals are written in grid indices;
+a signal with such gaps needs the `timestamped` kind.
+Question 40 asks whether that is acceptable.
 
 #### How source features map
 
@@ -497,7 +500,8 @@ NEMAR's profile refuses epoched sources for now, and question 21 asks whether th
 
 #### The back catalog
 
-- Version 2 stores stay readable, as version 2.
+- Every version 3 reader MUST read version 2 stores.
+  This is decided (NEMAR, 2026-11-20) and not open for comment; version 1 is expired, and a version 3 reader need not read it.
   A reader treats a version 2 group as `uniform`, starting at 0, with one interval and no declared missing value, and SHOULD tell its user that continuity is not recorded.
 - NEMAR re-converts old stores from their sources through its normal conversion queue, starting with recordings whose source can be discontinuous.
 - A store MUST NOT be changed from version 2 to version 3 by editing its metadata, because that would assert one valid interval without checking the source.
@@ -892,10 +896,15 @@ A short answer with a real file behind it is worth more than a long one without.
 
 36. Are the four reader-safety layers enough, and is each one testable in your reader? Does any deployed reader you know of slip past all four?
 37. Is one recording timeline with a `start_time` per uniform group the right model for streams that start at different times, and for a source cut from a longer session?
-38. Is `onset_source_basis` (`timeline`, `concatenated`, `unknown`) enough to align events in a recording with gaps, and is the onset-to-sample rule, with its test against each interval's acquired time span, the rule you would implement?
+38. Is `onset_source_basis` (`timeline`, `concatenated`, `unknown`) enough to align events in a recording with gaps, and is the onset-to-sample rule the rule you would implement?
+
 **Resolution, continued**
 
 39. Should a store also carry an explicit bit-depth attribute for its stored samples, beside `dtype` and `scale`, or is `dtype` enough?
+
+**Sub-sample gaps**
+
+40. A gap shorter than one sample period cannot be written in `valid_intervals` and needs the `timestamped` kind. Do you have uniform recordings with such gaps, and is that the right home for them?
 
 ## How the decision will be made
 
