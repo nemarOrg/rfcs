@@ -1,0 +1,42 @@
+name: rfc-check
+
+# A pull request runs once, on its own event; a push runs only on main.
+# There is no path filter on purpose: this is the one check a pull request must pass,
+# and a required check that never reports would block a change to a file it does not read.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The check reads the repository and the pull requests' file lists, and nothing else.
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rfc-check:
+    name: rfc-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The check compares each record with the base branch's copy.
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun run src/check.ts
+        env:
+          # A pull request is compared with its base branch; a push with the commit before it.
+          RFC_BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

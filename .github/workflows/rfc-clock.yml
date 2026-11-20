@@ -1,0 +1,36 @@
+name: rfc-clock
+
+# The daily clock of the RFC process. It posts reminders, closes and locks a thread at its
+# close instant, and fails the run when GitHub disagrees with the record. It edits no file and
+# decides nothing. A scheduled workflow in a public repository is switched off after 60 days
+# without repository activity; the weekly report shows when this job last ran.
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  discussions: write
+
+concurrency:
+  group: rfc-clock
+  cancel-in-progress: false
+
+jobs:
+  rfc-clock:
+    name: rfc-clock
+    if: github.repository == 'nemarOrg/rfcs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run src/clock.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
