@@ -28,7 +28,8 @@ The specification text this Request for Comments (RFC) proposes is the compariso
 ## Summary
 
 As of 2026-11-20, the Neuroelectromagnetic Data Archive and Tools Resource (NEMAR) serves 231,259 biosig-zarr stores,
-one for each of 98.4% of the 235,038 raw recordings in its 910 public datasets, covering about 116,000 hours of recordings.
+one for each of 98.4% of the 235,038 raw recordings in its 910 public datasets,
+covering about 116,285 hours of recordings (the sum of the public catalog's `total_recording_duration`; see "History of the format").
 Our data viewer reads these stores to show any recording in a browser without a download,
 and our Model Context Protocol (MCP) server reads them so that research agents can query and analyze signals directly.
 
@@ -77,7 +78,8 @@ Everything in the version 2 text is open for comment, including its 33 open ques
 and so is everything this RFC proposes for version 3.
 The items under "Decided, and out of scope for comment" are closed, each with the record that closed it.
 
-The RFC opens with the specification text, its JavaScript Object Notation (JSON) schemas, and a few conformance test vectors made from real recordings, all in nemarOrg/biosig-zarr.
+When the RFC opens, nemarOrg/biosig-zarr will hold the proposed text, its JavaScript Object Notation (JSON) schemas, and a few conformance test vectors made from real recordings.
+The conformance suite starts with those vectors, and each of the four reader-safety layers of the proposal has at least one case in it that fails when the check is removed.
 No tool writes or reads `.bzx` yet, and no version 3 writer exists.
 We are publishing before the first implementation on purpose, while the rules are still cheap to change.
 
@@ -106,8 +108,8 @@ Its open question 9 ([lines 737 and 738](https://github.com/nemarOrg/biosig-zarr
 Three kinds of data run into this limit.
 
 The first is a recording with gaps, where the recorder paused and resumed.
-The European Data Format (EDF) in its original form cannot represent a gap, because its data records are contiguous.
-Its successor EDF Plus (EDF+) has a discontinuous variant (EDF+D) in which each data record carries its own start time.
+Classic European Data Format (EDF) assumes contiguous data records.
+Its successor EDF Plus (EDF+) has a discontinuous variant (EDF+D) in which data records need not be contiguous and each record's start time is given by its time-keeping annotation.
 The BioSemi Data Format (BDF) has the same variant, BrainVision files mark each restart with a "New Segment" marker,
 and the Functional Image File Format (FIF) used for MEG and the Multiscale Electrophysiology Format version 3 (MEF3) record skips between data blocks.
 
@@ -116,7 +118,13 @@ The Extensible Data Format (XDF) written by the Lab Streaming Layer (LSL) works 
 
 The third is a sparse or irregular signal,
 such as a cuff blood pressure every few minutes, a temperature probe, or a value that arrives when it arrives.
-Neither EDF nor EDF+ has a real representation for these, and neither does version 2.
+EDF+D can encode irregular samples as individually timestamped records of duration 0, one sample per ordinary signal per record
+([EDF+ specification](https://www.edfplus.info/specs/edfplus.html), sections 2.1.1, 2.1.2 and 2.2.4);
+each such timestamp is per record and shared by every ordinary signal in it.
+Version 2 has no representation for any of the three.
+
+So the source formats can carry this timing; the trouble is that it is easy to lose on the way into another format, and version 2 has nowhere to put it.
+The motivation for timestamped Zarr groups, and for gaps recorded on the grid, is to preserve that timing explicitly and to stream it in windows like any other signal.
 
 Tools in use today already get the gap case wrong, so this is a present-day failure, not a hypothetical one.
 On 2026-11-20 we wrote a small synthetic EDF+D file whose four one-second data records start at 0, 1, 10 and 11 seconds.
@@ -134,12 +142,12 @@ A version 2 store cannot show the problem even when the writer knows about it, b
 BIDS contributors have raised the same limit (all links checked 2026-11-20):
 
 - BIDS Extension Proposal (BEP) 045, "Peripheral" physiology ([proposal page](https://bids.neuroimaging.io/extensions/beps/bep_045.html), [bids-specification#2267](https://github.com/bids-standard/bids-specification/pull/2267), a draft pull request opened 2025-11-22 and still open):
-  the BIDS extension for raw physiological recordings, whose authors opened the next issue to settle how sparse and non-continuous recordings are stored.
+  the BIDS extension for raw physiological recordings, as part of whose writing the next issue was raised.
 - [bids-specification#2313](https://github.com/bids-standard/bids-specification/issues/2313), "Storing sparse/non-continuous peripheral physiological data" (2026-01-19), written for BEP 045:
   sparse data such as pulse timestamps with no continuous series behind them, and continuous data whose sampling rate is not constant.
 - [bids-specification#1771](https://github.com/bids-standard/bids-specification/issues/1771), the issue that BEP 047 (audio and video) grew from:
-  on [2024-04-22](https://github.com/bids-standard/bids-specification/issues/1771) a commenter asked whether a recording that stopped and resumed is one file or several, quoting the discontinuous mode of EDF+.
-  The answer given that day was separate runs, with each run's start time in the scans file.
+  in a [comment of 2024-04-22](https://github.com/bids-standard/bids-specification/issues/1771#issuecomment-2069822739) on the issue opened 2024-04-11, a commenter asked whether a recording that stopped and resumed is one file or several, quoting the discontinuous mode of EDF+.
+  The [answer given that day](https://github.com/bids-standard/bids-specification/issues/1771#issuecomment-2070906065) was separate runs, with each run's start time in the scans file.
 - [bids-specification#1796](https://github.com/bids-standard/bids-specification/issues/1796), "allow timestamps for physio table" (2024-04-18):
   an optional timestamp column for irregularly sampled physiological and motion tables, where `SamplingFrequency` assumes regular sampling.
 - [bids-specification#2463](https://github.com/bids-standard/bids-specification/issues/2463), "Plain-text TSV for motion/physio doesn't scale" (2026-07-08):
@@ -229,12 +237,17 @@ That direction is superseded: the text lives in nemarOrg/biosig-zarr from 2026-1
 
 Three different things at NEMAR carry the number 3, and only one of them is this proposal.
 `format_version` 3 here is the version of a single store.
-NEMAR's dataset index, `index.json`, has its own `format_version`, which is already 3 and describes the index, not the stores.
+NEMAR's dataset index, `index.json`, has its own `format_version`:
+indexes written by NEMAR's current conversion engine are version 3, while about half the catalog still publishes index version 1,
+and either way it describes the index, not the stores.
 NEMAR's conversion engine has its own version number too (nemar-cli ADR 0033), which says which build of the converter produced a store.
 
 Everything in the two parts of this proposal is put up for comment.
-NEMAR has settled the position it brings to the RFC (twelve design decisions of 2026-11-20, noted below as D1 to D12),
-and comments can change any of them.
+NEMAR settled the position it brings to the RFC in twelve design decisions on 2026-11-20, and comments can change any of them.
+
+In this proposal, the key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are used as Best Current Practice 14 (BCP 14) defines them,
+in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174), when, and only when, they appear in capitals, as in the specification text.
+RFC 2119 and RFC 8174 are documents of the Internet Engineering Task Force (IETF), separate from NEMAR's RFCs.
 
 Version 3 is not only for future data.
 Gaps (EDF+D, FIF skips, BrainVision segments) and source resolution affect data NEMAR already holds,
@@ -246,12 +259,20 @@ while the `timestamped` group kind gives a home to data that BIDS does not carry
   Time 0 is the instant the source file's own clock calls its start.
 - `events/onset` values are on this timeline, and gaps count.
   An event after a 30-second pause has an onset 30 seconds later than its position in the concatenated samples.
+- Every uniform group has a required `start_time`: the time of its sample 0 on the timeline.
+  It lets streams that started at different times share one timeline, and a source cut from a longer session keep its own clock.
 - An optional root attribute `origin_source_time` holds the value of the source's own clock at time 0, for sources that have one, such as the LSL clock in XDF.
   With it, a reader can restore source timestamps exactly.
 - The absolute date and time of the origin stays open (version 2 open question 10).
   It is a privacy question more than a timing one.
 
-#### Two kinds of group [D1]
+#### Identification
+
+A version 3 writer MUST write `format_version` 3 and the format name `biosig-zarr` on every store.
+It also writes a root attribute `zarr_conventions` that declares the store under the Zarr conventions mechanism with the biosig-zarr convention's fixed identifier;
+like the name, this attribute is marked Proposed in the text, and its shape is question 5.
+
+#### Two kinds of group
 
 Every group carries a required attribute `kind`:
 
@@ -262,7 +283,7 @@ Every group carries a required attribute `kind`:
 
 `channel_groups` keeps its name and its version 2 meaning, so a reader that navigates by it never lands on a group it cannot read.
 
-#### Gaps stay on the grid: `valid_intervals` [D3]
+#### Gaps stay on the grid: `valid_intervals`
 
 A `uniform` group is the version 2 channel group plus these required attributes:
 
@@ -278,16 +299,18 @@ Each interval has `start` (first sample index), `stop` (one past the last), and 
 
 - A continuous recording has exactly one interval.
   A store therefore states continuity, instead of implying it by saying nothing.
-- A sample outside every interval was never acquired, and a reader must not return it as data.
-- Chunks that lie wholly inside a gap are never written.
+- When `source_time` is a number, `start` MUST equal `round((source_time - start_time) * rate)`;
+  the placement error, at most half a sample period, follows from the two numbers.
+- A sample outside every interval was never acquired, and a reader MUST NOT return it as data.
+- A writer MUST NOT write a chunk that lies wholly inside a gap.
   Zarr reads an absent chunk as the fill value, so a gap of any length costs no storage.
 - `source_time: null` means the order is known and the elapsed time is not,
   as with a BrainVision "New Segment" marker with no date, an EEGLAB `boundary` event, or concatenated runs.
   The interval is placed directly after the previous one.
-  Grid times from there on are a convention, and a reader that reports them must say so.
-- A reader must not filter, resample, epoch or interpolate across an interval boundary.
-  A writer resamples each interval on its own.
-- A writer should not write more than 65,536 intervals in a group; a signal more fragmented than that is a `timestamped` signal.
+  Grid times from there on are a convention, and a reader that reports them MUST say so.
+- A reader MUST NOT filter, resample, epoch or interpolate across an interval boundary.
+  A writer MUST resample each interval on its own.
+- A writer SHOULD NOT write more than 65,536 intervals in a group; a signal more fragmented than that is a `timestamped` signal.
 
 An EDF+D recording with 19 channels at 250 Hz, recorded from 0 to 60 seconds and again from 90 to 240 seconds, has these group attributes
 (illustrative numbers; attributes not shown are unchanged from version 2):
@@ -310,29 +333,31 @@ An EDF+D recording with 19 channels at 250 Hz, recorded from 0 to 60 seconds and
 
 With 1,000-sample chunks, chunks 15 to 21 do not exist, and chunk 22 holds 500 filler samples followed by 500 valid ones.
 
-#### A declared missing value [D4]
+#### A declared missing value
 
 Every signal array carries a required attribute `missing_value`: the stored value that means "no sample here".
 
-| Data type | `missing_value` | Effect |
+| Data type | `missing_value` | Data codes |
 | --- | --- | --- |
-| `int16` | `-32768` | Data codes span `[-32767, 32767]` (65,534 steps). |
-| `int32` | `-2147483648` | Data codes span `[-2147483647, 2147483647]`. |
-| `float32`, `float64` | `"NaN"` | None. |
+| `int16` | `-32768` | `-32767` to `32767`: 65,535 codes, 65,534 steps. |
+| `int32` | `-2147483648` | `-2147483647` to `2147483647`. |
+| `float32`, `float64` | `"NaN"` | Every value that is not NaN. |
 | any | `null` | Every stored value is data (allowed only for a bit-exact copy; see "Bit-exact copies"). |
 
-- When `missing_value` is not `null`, the array's Zarr `fill_value` must equal it, so an absent chunk decodes to missing.
-- A reader returns a missing sample as missing (NaN, a mask, or a range list), never as `missing_value * scale + offset`.
-- Non-finite source samples in an integer store become the missing value.
-  This replaces the version 2 behavior and closes its open question 6, because the replaced samples can be located.
+- When `missing_value` is not `null`, the array's Zarr `fill_value` MUST equal it, so an absent chunk decodes to missing.
+- A reader MUST return a missing sample as missing (NaN, a mask, or a range list), never as `missing_value * scale + offset`.
+- In an integer array, a writer MUST store a non-finite source sample as the missing value.
+  This replaces the version 2 behavior and closes its open question 6 for integer stores, because the replaced samples can now be located.
+  A floating point array keeps NaN, which is its missing value, and keeps infinities as they are;
+  in both kinds of array the channel counts its non-finite samples and is marked unfit for inference.
 - `valid_intervals` describes the acquisition (the recorder was off),
   and `missing_value` describes one channel at one sample (a sensor off, a dropped packet).
 - NEMAR's profile always reserves the code.
 - Reserving `-32768` changes the version 2 quantization.
   Version 2 maps each channel's physical range onto all 65,536 `int16` codes, with `offset = pmin + 32768 * scale`;
-  version 3 maps it onto the 65,534 codes from `-32767` to `32767`, so `scale` grows by a factor of 65,535/65,534 and `offset` moves to the middle of the range.
+  version 3 maps it onto the 65,535 codes from `-32767` to `32767`, so `scale` grows by a factor of 65,535/65,534 and `offset` moves to the middle of the range.
 
-#### Jittered streams: kept as measured by default [D5]
+#### Jittered streams: kept as measured by default
 
 The format permits two homes for a stream with a nominal rate and a timestamp per sample.
 The first keeps the stream as measured, in a `timestamped` group with `nominal_rate` set, and loses nothing about timing.
@@ -344,6 +369,7 @@ NEMAR's profile keeps such streams as measured by default, and regularizes only 
 #### The `timestamped` kind
 
 A `timestamped` group holds an irregular signal, a sparse signal with a value, or a jittered stream kept as measured.
+An EDF+D file whose records have duration 0, one sample per ordinary signal each, maps here: each record's timestamp becomes one entry of `time`.
 
 ```
 <name>/                 group, kind "timestamped"
@@ -353,12 +379,15 @@ A `timestamped` group holds an irregular signal, a sparse signal with a value, o
   time_index/           float64, shape [n_chunks]: the first time of each chunk
 ```
 
-- It has no array named `0`, no `rate` attribute and no `view` group.
-- Sample `i` of every channel in the group was taken at `time[i]`; channels that do not share timestamps go in separate groups.
+- It MUST NOT have an array named `0`, a `rate` attribute or a `view` group.
+- Sample `i` of every channel in the group was taken at `time[i]`; channels that do not share timestamps MUST go in separate groups.
+- `values` has the group's storage type (the group's own `dtype`, else the root `dtype`; see "Part B"),
+  and carries `scale`, `offset`, `missing_value` and `physical_formula` with the meanings they have on level 0.
 - `nominal_rate` is the rate the source declared, or `null`.
-  `effective_rate` is informative; a reader must not compute sample times from it.
-- `continuity` is `"continuous"`, `"step"`, `"instantaneous"` or `"unknown"` (the names follow NWB), and a reader must not interpolate a group that is not `"continuous"` without saying so.
-- The `time` array carries its own `derivation` list: `clock_synchronized`, `dejittered`, `deduced`, `sorted`, or empty when the values are the source's own timestamps shifted to the origin.
+  `effective_rate` is informative; a reader MUST NOT compute sample times from it.
+- `continuity` is `"continuous"`, `"step"`, `"instantaneous"` or `"unknown"` (the names follow NWB), and a reader MUST NOT interpolate a group that is not `"continuous"` without saying so.
+- The `time` array carries its own `derivation` list, from a second closed vocabulary: `clock_synchronized`, `dejittered`, `deduced`, `sorted`, or empty when the values are the source's own timestamps shifted to the origin.
+  It is separate from the channels' list because it describes the timestamps, not the samples; question 28 covers both.
 - A window read fetches `time_index` (one request), searches it, and fetches the matching `time` and `values` chunks.
 - The `time` array costs 8 bytes per sample before compression.
   For a 64-channel 16-bit stream that is 6.25% on top of the values; for a 4-channel stream it is 100% (arithmetic; the effect of compression was not measured).
@@ -382,7 +411,7 @@ A cuff blood pressure taken about every five minutes beside a four-hour EEG reco
 
 The root then lists `"channel_groups": ["eeg_250hz"]` and `"timestamped_groups": ["bp_cuff"]`.
 
-#### Four layers of reader safety [D1]
+#### Four layers of reader safety
 
 No single omission should let a reader misread.
 That is not yet true for NEMAR's own readers.
@@ -392,30 +421,40 @@ so without a change it would return the filler in a gap as data.
 For that reason this RFC adds a rollout rule (see "Rollout and cost"): every NEMAR reader refuses a store whose `format_version` is above 2 before the first version 3 store reaches the serving bucket,
 and the dataset index records each store's `format_version`.
 
-The first layer is the version.
-A writer that implements this proposal writes `format_version` 3 for every store, including a plain continuous recording.
-A reader must refuse a version above the highest it implements.
-biosigIO's reader has refused a newer version since release 0.6.0 (checked in the source of 0.6.0 and 1.2.13 on 2026-11-20), so every deployed biosigIO release refuses version 3.
+Each layer is a refusal rule that a conformance case can test: the case passes when the reader refuses with an error that names the feature, and fails when the check is removed.
 
-The second layer is the kind.
-A reader reads `kind` before any array, refuses a kind it does not implement, and never infers a kind from a name or from which children exist.
-A new kind requires a new `format_version`.
+1. **Version.**
+   A reader MUST refuse a store whose `format_version` is above the highest it implements.
+   biosigIO's reader has refused a newer version since release 0.6.0 (checked in the source of 0.6.0 and 1.2.13 on 2026-11-20), so every deployed biosigIO release refuses a version 3 store;
+   it also refuses the name `biosig-zarr`, which version 3 writers write.
+2. **Kind.**
+   A reader MUST read a group's `kind` before any array of the group,
+   MUST refuse a group whose `kind` it does not implement, and MUST refuse a group of a version 3 store that has no `kind`.
+   A reader MUST NOT infer a kind from a group's name or from which children it has.
+   A new kind MUST increase `format_version`.
+3. **Structure.**
+   A writer MUST NOT name a `timestamped` group in `channel_groups`, and a `timestamped` group MUST NOT have an array `0`, a `view` group or a `rate` attribute.
+   A reader that opens a group as uniform MUST refuse it when its `0` array or its `rate` attribute is absent, and MUST NOT substitute a default for either.
+   So a reader that skips the first two layers and navigates by `channel_groups` never reaches a `timestamped` group,
+   and one that opens such a group anyway gets an error instead of wrong times.
+   This layer exists because some deployed readers check neither the format name nor the version; NEMAR's server-side read path is one.
+4. **Within a uniform group.**
+   A reader that does not implement `start_time`, `valid_intervals` or `missing_value` MUST refuse a group where that attribute is in effect, with an error that names it.
+   `start_time` is in effect when it is not 0.
+   `valid_intervals` is in effect when it holds more than one interval, or when any interval's `source_time` is `null`.
+   `missing_value` is in effect when it is not `null` on level 0.
 
-The third layer is structure.
-A `timestamped` group is not in `channel_groups` and has no `0` array and no `rate`,
-so a reader that skips both checks above gets a missing-node error instead of wrong times.
-This layer exists because some deployed readers check neither the format name nor the version; NEMAR's server-side read path is one.
+When the RFC opens, the conformance suite in nemarOrg/biosig-zarr has at least one such case for each of the four layers.
 
-The fourth layer is refusal inside a uniform group.
-A reader that does not implement `start_time`, `valid_intervals` or `missing_value` must refuse a group where one is in effect
-(a nonzero start, more than one interval or a `null` `source_time`, a declared missing value), with an error that names the feature.
-The conformance suite tests each refusal.
-
-#### Events and the onset-to-sample rule [D10]
+#### Events and the onset-to-sample rule
 
 - For a `uniform` group, the sample nearest an onset is `i = floor((onset - start_time) * rate + 0.5)`.
-  If `i` falls outside the array or outside every valid interval, the event has no sample in that group, and a reader says so instead of clamping.
+  If `i` falls outside the array, or the onset falls outside the acquired time of every valid interval (below), the event has no sample in that group, and a reader MUST say so instead of clamping.
+  An event with no sample keeps its onset.
   This closes version 2 open question 16.
+- The acquired time of an interval is the half-open span `[t, t + (stop - start) / rate)`,
+  where `t` is its `source_time`, or `start_time + start / rate` when `source_time` is `null`.
+  A reader MUST test the onset against this span, not only test `i` against `[start, stop)`, because placing an interval on the grid can round its first sample onto a grid point earlier than its source time.
 - For a `timestamped` group, it is the first `i` with `time[i] >= onset`.
 - The `events` group gains a required attribute `onset_source_basis`:
   `"timeline"` (the source gave onsets on the recording timeline, as EDF+ annotations do),
@@ -423,12 +462,19 @@ The conformance suite tests each refusal.
   or `"unknown"`.
   With more than one interval, a reader needs this attribute to align events correctly.
 
+A required conformance case tests the span rule.
+A uniform group at 10 Hz has `start_time` 0 and two intervals: `{ "start": 0, "stop": 20, "source_time": 0.0 }`, acquired from 0.00 to 2.00 seconds,
+and `{ "start": 20, "stop": 40, "source_time": 2.04 }`, placed at grid index `round(2.04 * 10) = 20`, so there is a known acquisition gap from 2.00 to 2.04 seconds.
+An event at 2.02 seconds keeps its onset of 2.02 seconds, and a reader MUST return no acquired sample for it,
+even though `floor(2.02 * 10 + 0.5) = 20` is a valid grid index inside the second interval.
+
 #### How source features map
 
 | Source feature | In a version 3 store |
 | --- | --- |
 | Uniform continuous file | One `uniform` group per modality and rate; one interval. |
 | EDF+D, BDF discontinuous | Intervals from the record start times; `source_time` set. |
+| EDF+D with records of duration 0, one sample per ordinary signal | `timestamped`, one `time` entry per record. |
 | BrainVision "New Segment" markers | One interval per segment; `source_time` from the marker's date, else `null`. |
 | FIF data skips, MEF3 gaps | Intervals from the skip or block table; a reader library's zero fill is not stored as data. |
 | EEGLAB `boundary` events, concatenated runs | Adjacent intervals with `source_time: null`. |
@@ -443,57 +489,60 @@ The conformance suite tests each refusal.
 The design behind this RFC also maps the General Data Format for biomedical signals (GDF), the Waveform Database format (WFDB) and the Shared Near Infrared Spectroscopy Format (SNIRF).
 Those mappings come from the formats' documentation and have not been tested against files, so they stay out of this table; commenters who hold such files are asked to test them (question 18).
 
-#### Epoched sources [D12]
+#### Epoched sources
 
 A source that holds only cut trials has no continuous timeline to restore.
 The format can express it as adjacent intervals with `source_time: null`.
 NEMAR's profile refuses epoched sources for now, and question 21 asks whether the format should accept them.
 
-#### The back catalog [D2]
+#### The back catalog
 
 - Version 2 stores stay readable, as version 2.
-  A reader treats a version 2 group as `uniform`, starting at 0, with one interval and no declared missing value, and should surface "continuity not recorded".
+  A reader treats a version 2 group as `uniform`, starting at 0, with one interval and no declared missing value, and SHOULD tell its user that continuity is not recorded.
 - NEMAR re-converts old stores from their sources through its normal conversion queue, starting with recordings whose source can be discontinuous.
-- A version 2 store is never upgraded by editing its metadata, because that would assert one valid interval without checking the source.
+- A store MUST NOT be changed from version 2 to version 3 by editing its metadata, because that would assert one valid interval without checking the source.
 - The rename of the format tag from `biosigio-zarr` to `biosig-zarr` follows the same rule (nemar-cli ADR 0131):
   no store is patched in place, the version 3 writer writes the new name, and existing stores keep the old name until they are re-converted.
   Readers accept both names, permanently.
 
 ### Part B: sample resolution
 
-#### The store side: what the existing fields mean [D6]
+#### The store side: what the existing fields mean
 
-No new store-side field is needed; the text defines what the existing ones mean.
+No new store-side field is proposed; the text defines what the existing ones mean.
+This is a deliberate choice: `dtype` already is the storage resolution (width and integer or floating point), `scale` already is the store's step,
+and the new `source_*` fields below, including `source_sample_type` and `source_adc_bits`, state the source's resolution explicitly.
+A separate bit-depth attribute on the store side would repeat `dtype`; question 39 asks whether the store should carry one anyway.
 
-Root `dtype` is the storage type.
+Root `dtype` is the storage type, and it stays REQUIRED.
 Its name gives the width in bits and whether the type is integer or floating point.
-It is the store default; a group may carry its own `dtype`, and an array's Zarr `data_type` must equal the resolved value.
+It is the store default; a group MAY carry its own `dtype`, and every signal array's Zarr `data_type` MUST equal the resolved value.
 
-The closed list of storage types becomes `int16`, `int32`, `float32`, `float64`.
+The closed list of storage types becomes `int16`, `int32`, `float32`, `float64`, for uniform and timestamped groups alike.
 `int32` gives 24-bit sources a home without requantization, and `float64` does the same for double-precision sources.
 Zarr version 3 has no 24-bit integer type.
-A signal reader may refuse a type it does not support, with a clear error.
-NEMAR's profile stays `int16`.
+A signal reader MUST support `int16`, and MAY refuse another type with an error that names it.
+NEMAR's profile stays `int16` for uniform groups.
 
 For an integer type, `scale[c]` is the store's quantization step for channel `c`, its resolution in the channel's unit:
 one digital step, with a maximum error of half a step on a requantized sample.
 For a floating point type, `scale` is 1, `offset` is 0, and the resolution is that of the type.
 `physical = digital * scale + offset` is unchanged.
 
-#### The source side: five new fields [D9]
+#### The source side: five new fields
 
 | Field | Where | Type | Meaning |
 | --- | --- | --- | --- |
-| `source_sample_type` | root default, channel override | string | The type of a decoded sample in the source: `int<N>` or `uint<N>`, `float32`, `float64`, or `"n/a"`. A BDF file is `int24`. |
-| `source_adc_bits` | root default, channel override | integer or `null` | The bit depth of the analog-to-digital converter (ADC), only when the source states it. Never inferred from the sample type. |
-| `source_step` | each channel | number or `null` | One source digital step in the channel's unit: the source's resolution. `null` for a floating point source. |
-| `source_offset` | each channel | number or `null` | The physical value of source digital code 0. |
-| `source_digital_range` | each channel | `[min, max]` or `null` | The digital minimum and maximum the source declares. |
+| `source_sample_type` | root (REQUIRED), channel (OPTIONAL override) | string | The type of a decoded sample in the source: `int<N>` or `uint<N>`, `float32`, `float64`, or `"n/a"`. A BDF file is `int24`. |
+| `source_adc_bits` | root (REQUIRED), channel (OPTIONAL override) | integer or `null` | The bit depth of the analog-to-digital converter (ADC), only when the source states it. Never inferred from the sample type. |
+| `source_step` | each channel (REQUIRED) | number or `null` | One source digital step in the channel's unit: the source's resolution. `null` for a floating point source. |
+| `source_offset` | each channel (REQUIRED) | number or `null` | The physical value of source digital code 0. |
+| `source_digital_range` | each channel (REQUIRED) | `[min, max]` or `null` | The digital minimum and maximum the source declares. |
 
-- The first two are required at the root, where `"n/a"` and `null` are allowed.
+- The first two are REQUIRED at the root, where `"n/a"` and `null` are allowed.
   A channel's own value, when present, overrides the root's.
   The channel value replaces the root value instead of multiplying it, because these fields are facts, not gain factors.
-- The other three are required per channel, where `null` is allowed.
+- The other three are REQUIRED on every channel, where `null` is allowed.
 - The source's physical range is not stored, because it follows from the three per-channel fields.
 - The storage width and the converter depth are separate fields because a 16-bit converter can sit in a 24-bit file.
 
@@ -519,9 +568,9 @@ with `"source_sample_type": "int24"` and `"source_adc_bits": null` at the root.
 `scale` is 4000/65,534 microvolts, about twice `source_step`,
 so a reader sees at once that this store is about one bit coarser than its source.
 
-#### Bit-exact copies [D7]
+#### Bit-exact copies
 
-When a channel is not resampled, not unit-converted, and the store's integer type holds the source's codes, a writer may copy the codes unchanged:
+When a channel is not resampled, not unit-converted, and the store's integer type holds the source's codes, a writer MAY copy the codes unchanged:
 `scale` equals `source_step`, `offset` equals `source_offset`, and `derivation` is empty.
 An EDF file at or below the rate cap can then be reproduced bit for bit.
 If the source uses the type's most negative code as data, the array declares `missing_value: null`.
@@ -529,9 +578,9 @@ If the source uses the type's most negative code as data, the array declares `mi
 The format allows this.
 NEMAR will decide whether its writer does it after measuring how many recordings qualify.
 
-#### Every lossy step is recorded: `derivation` [D8]
+#### Every lossy step is recorded: `derivation`
 
-Each channel carries a required list `derivation`, in the order the steps were applied, from a closed vocabulary:
+Each channel carries a REQUIRED list `derivation`, in the order the steps were applied, from a closed vocabulary:
 
 | Token | Meaning |
 | --- | --- |
@@ -546,9 +595,9 @@ Each channel carries a required list `derivation`, in the order the steps were a
 | `gap_filled` | Samples at times the source did not record are stored as data. Only for sources whose reader fills silently. |
 
 - An empty list means the stored codes are the source's codes.
-- A profile may add tokens that contain a colon, such as `nemar:sss`; a reader treats an unknown token as "derived, in a way I do not know".
+- A profile MAY add tokens that contain a colon, such as `nemar:sss`; a reader MUST treat an unknown token as "derived, in a way I do not know".
 
-#### NEMAR's content digest [D11]
+#### NEMAR's content digest
 
 NEMAR keys derived results on a digest of a store's level-0 values (nemar-cli ADR 0123, proposed, digest `nemar.store-content.v1`).
 That digest has no notion of a missing sample, an interval or a time array.
@@ -566,9 +615,11 @@ The packaged form holds the same store in one file.
 - Every entry is byte-identical to the corresponding object of the directory form,
   so a byte range inside an entry maps to a byte range of the file, and packing changes no chunk and no metadata.
 - The archive always uses the ZIP64 extension.
-- The ZIP archive comment carries the format name and `format_version`, so a reader can identify the file, and refuse a version it does not implement, without opening an entry.
+- The ZIP archive comment carries the format name and `format_version`, so a reader can identify the file without opening an entry.
+  Version 3 proposes that a reader can also refuse a version it does not implement from the comment alone; that depends on the comment's encoding, which is question 10.
 - A `.bzx` file holds no other `.bzx` file and no other zipped Zarr hierarchy.
 - A `.bzx` file is written once; a changed store is packed again.
+- Because every entry is stored and byte-identical, a reader can map a chunk to a byte range of the file and read a remote `.bzx` with HTTP range requests (question 14).
 
 Version 3 changes no packing rule, because `time`, `values` and `time_index` are ordinary arrays.
 A never-written chunk has no entry.
@@ -653,12 +704,14 @@ Arguments that one of these was decided wrongly are still welcome as issues; the
 | --- | --- |
 | A store is not an NWB container and will not be made NWB-conformant; any NWB output is a stateless export. | nemar-cli ADR 0128, Decision. |
 | One package holds one recording. It is an alternative to a data file, not to a dataset. | ADR 0128, Context and Consequences; the specification, "Scope and non-goals". |
-| Package entries are stored without ZIP compression, each byte-identical to the directory-form object. | The specification, "The packaged form"; nemar-cli issue 2216. |
-| A package is written once and never edited in place. | The same two records. |
-| NEMAR builds packages on the researcher's machine and stores none on its servers; the sidecar rewrite belongs to NEMAR's download command, not to the format. | nemar-cli issue 2216. |
 | The license model: specification text under the World Wide Web Consortium (W3C) Software and Document License; schemas, test vectors and code under the Apache License 2.0. | ADR 0128, Consequences; ADR 0131, Decision 1; neuromechanist/biosigio issue 179. |
 | The specification lives in nemarOrg/biosig-zarr, and the `.bzx` packing rules are NEMAR's own, not a dependency on OME-Zarr RFC-9. | nemar-cli ADR 0131, Decisions 1 and 2. |
 | No store's metadata is patched in place; the tag rename arrives through re-conversion. | ADR 0128, "One copy, and how drift is refused"; ADR 0131, Decision 3. |
+
+Two packaging rules that earlier drafts listed here have no decision record, so they are open for comment with the rest of the proposal (question 8):
+entries stored without ZIP compression and byte-identical to the directory form,
+and a package written once and never edited in place.
+How NEMAR's own download command builds packages (planned in nemar-cli issue 2216 to run on the researcher's machine, with nothing stored on NEMAR's servers, and to rewrite the sidecars) is a choice about NEMAR's tool, not about the format, and is outside this RFC.
 
 ## Options considered
 
@@ -687,8 +740,6 @@ Doing nothing means version 2 as it stands: gaps, jitter and sparse signals have
 | NWB on Zarr as the store | See "Why not NWB on Zarr" below. |
 
 ### Why not NWB on Zarr
-
-We are asked this about our stores more than anything else.
 
 NWB has a Zarr backend, [`hdmf-zarr`](https://nwb.org/tools/core/hdmf-zarr/), built on the Hierarchical Data Modeling Framework (HDMF).
 It is a great tool.
@@ -773,7 +824,7 @@ The RFC-9 column below was checked against RFC-9's source on 2026-11-20.
 
 ### Other prior art
 
-- **EDF, EDF+ and BDF** are the contract the biosignal community already shares; biosig-zarr borrows their per-channel digital-to-physical mapping and their light annotations, and adds what EDF cannot hold (gaps on one grid, irregular and sparse series).
+- **EDF, EDF+ and BDF** are the contract the biosignal community already shares; biosig-zarr borrows their per-channel digital-to-physical mapping and their light annotations. EDF+D already carries gaps and, through records of duration 0, irregular samples; biosig-zarr keeps that timing explicit in a form that can be read in windows over a network.
 - **NWB** supplies the `continuity` vocabulary and the shape of the dequantization formula; see "Why not NWB on Zarr".
 - **BIDS** supplies the dataset around a store, and the threads cited under "Problem" record the same gaps from its side.
 - **XDF** and LSL supply the model for jittered streams kept as measured, with clock corrections recorded.
@@ -796,7 +847,7 @@ A short answer with a real file behind it is worth more than a long one without.
 
 **The package (`.bzx`)**
 
-8. This proposal requires what RFC-9 only recommends (ZIP64 always, root entry first). Does that lock out a tool you rely on?
+8. This proposal requires what RFC-9 only recommends (ZIP64 always, root entry first, entries stored without compression), and adds that every entry is byte-identical to the directory form and that a package is written once. Does any of that lock out a tool you rely on?
 9. Should split archives be forbidden, and should all `zarr.json` entries precede chunk entries in breadth-first order (open question 27)?
 10. What should the archive comment's encoding and shape be (open question 26)?
 11. Should entry order, timestamps and attributes be fixed, so that two tools packing one store produce identical bytes (open question 28)?
@@ -825,7 +876,7 @@ A short answer with a real file behind it is worth more than a long one without.
 
 **Resolution**
 
-28. Is the `derivation` vocabulary complete, and is an empty list a claim you would rely on?
+28. Are the two `derivation` vocabularies complete (the channels' list of lossy steps, and the `time` array's list of timestamp corrections), and is an empty list a claim you would rely on?
 29. Should `int32` and `float64` be core storage types, and may a signal reader refuse them?
 30. Should `source_adc_bits` exist when almost no EEG format states it?
 31. Is the pattern `int<N>` and `uint<N>` right for `source_sample_type`, or should the list be closed?
@@ -837,12 +888,27 @@ A short answer with a real file behind it is worth more than a long one without.
 34. Would a stateless NWB export from a store be useful to you, and which tool would read it?
 35. Are the revisit conditions the right ones?
 
+**Reader safety, the timeline and events**
+
+36. Are the four reader-safety layers enough, and is each one testable in your reader? Does any deployed reader you know of slip past all four?
+37. Is one recording timeline with a `start_time` per uniform group the right model for streams that start at different times, and for a source cut from a longer session?
+38. Is `onset_source_basis` (`timeline`, `concatenated`, `unknown`) enough to align events in a recording with gaps, and is the onset-to-sample rule, with its test against each interval's acquired time span, the rule you would implement?
+**Resolution, continued**
+
+39. Should a store also carry an explicit bit-depth attribute for its stored samples, beside `dtype` and `scale`, or is `dtype` enough?
+
 ## How the decision will be made
 
 We write these criteria before comments open, so they cannot be fitted to the comments.
 Who decides, the window and the clock are in [`PROCESS.md`](../PROCESS.md):
 the owner of the NEMAR platform decides, the window is 21 days measured to the minute from `opened_at` in Coordinated Universal Time (UTC), and the opening post prints the exact close.
+One extension of at most 14 days may be granted before the close, with a stated reason, so the window is never longer than 35 days.
 Every comment gets a written disposition before the decision.
+
+The window is short on purpose.
+NEMAR welcomes review assisted by artificial intelligence (AI) when knowledgeable people use it and check what it produces,
+and with that help a careful review fits in three weeks.
+At most one NEMAR RFC is open for comment at a time, so this one has the community's full attention while it is open.
 
 The proposal is accepted if all of these hold at the close:
 
@@ -851,7 +917,8 @@ The proposal is accepted if all of these hold at the close:
 2. Every real recording offered has a home.
    Each recording a commenter brings is either expressible in version 3 or named in the text as refused, with the reason.
 3. The refusals are testable.
-   Each of the four reader-safety layers has a conformance case that fails when the check is removed.
+   Each of the four reader-safety layers, and the onset rule's gap case, has at least one conformance case that fails when the check is removed;
+   those cases are in nemarOrg/biosig-zarr, with the first vectors, when the RFC opens.
 4. The package can be implemented from the text alone.
    Someone who did not write the text has confirmed that, or the gaps they found are closed.
 5. No decided item was reopened by accident.
@@ -899,6 +966,7 @@ the conversion queue stamps the engine version that made each dataset's stores (
 
 **Current scale, measured 2026-11-20 at 22:23 UTC.**
 NEMAR serves 231,259 stores across 836 datasets, out of 910 public datasets, for 235,038 recordings.
+The stores' durations sum to 418,624,671 seconds, about 116,285 hours.
 We measured this read-only, from the public catalog:
 
 ```
@@ -930,4 +998,4 @@ That date is also the earliest we can show that NEMAR served stores; earlier con
 
 ## Change log
 
-- 2026-11-20: first draft.
+- 2026-11-20: first draft, revised after an internal review the same day.
