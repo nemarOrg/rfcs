@@ -3,10 +3,10 @@
 This repository has two licenses, by kind of file, as NEMAR decided on 2026-11-20.
 The full texts are in [`LICENSES/`](LICENSES/).
 
-| Files                                                                                                                                                          | License                                        | SPDX identifier |
+| Files                                                                                                                                                          | License                                        | Software Package Data Exchange (SPDX) identifier |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | --------------- |
-| Text: `README.md`, `PROCESS.md`, `0000-template.md`, every RFC in `text/`, and the other Markdown documentation                                                | Creative Commons Attribution 4.0 International | `CC-BY-4.0`     |
-| Tooling: `src/`, `test/`, `schema/`, `ops/`, `.github/`, `package.json`, `bun.lock`, `biome.json`, `tsconfig.json`, `_typos.toml`, `AGENTS.md` and `CLAUDE.md` | MIT License                                    | `MIT`           |
+| Text: `README.md`, `PROCESS.md`, `0000-template.md`, every RFC in `text/`, and the other Markdown documentation                                                | Creative Commons Attribution 4.0 International (CC BY 4.0) | `CC-BY-4.0`     |
+| Tooling: `src/`, `test/`, `schema/`, `ops/`, `.github/`, `package.json`, `bun.lock`, `biome.json`, `tsconfig.json`, `_typos.toml`, and the agent instructions `AGENTS.md` and `CLAUDE.md` | MIT License                                    | `MIT`           |
 
 Copyright (c) 2026 NEMAR contributors.
 

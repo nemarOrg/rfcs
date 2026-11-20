@@ -12,8 +12,9 @@ The process is in [`PROCESS.md`](PROCESS.md); the decisions behind it are in nem
 ### Only the owner merges an RFC text pull request
 
 Merging a pull request that sets `opened_at` and `discussion` is the act of opening the RFC: it starts the clock and the announcements.
-An agent never merges one, never creates a Discussion, never locks a thread and never posts in one.
-`rfc-clock` is the only thing that posts or locks, and only from its scheduled workflow.
+No agent merges one, creates a Discussion, posts in a thread or locks one.
+`rfc-clock` posts reminders and locks at the close, from its scheduled workflow.
+The shepherd, a person, locks a withdrawn thread and posts its final comment by hand.
 
 ### A number is never reused
 

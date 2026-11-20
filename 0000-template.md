@@ -6,7 +6,7 @@ dataset: null # null for org; a dataset id such as nm000123 when scope is datase
 shepherd: Name or GitHub login of the NEMAR owner or admin who opens the RFC
 authors: [Name of an author]
 discussion: null # the thread's URL, set by the merge that opens the RFC
-opened_at: null # the thread's creation instant, UTC, rounded down to the minute: 2027-01-11T16:00:00Z
+opened_at: null # the thread's creation instant, UTC, rounded down to the minute, in Coordinated Universal Time (UTC): 2027-01-11T16:00:00Z
 window_days: 21 # 7 to 21
 extension: null # {granted_at: 2027-01-25T10:00:00Z, days: 7, reason: "..."}; one at most, of at most 14 days
 final_comment_at: null # set with proposed_disposition when the shepherd posts the summary of comments

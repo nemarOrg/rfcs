@@ -8,7 +8,7 @@ Where this page and an Architecture Decision Record (ADR) in nemarOrg/nemar-cli 
 
 An RFC is how NEMAR asks the community before a decision that people outside NEMAR will implement, cite or depend on.
 Examples are a file format, a rule for versioning or citing datasets, and a change to what happens to one dataset's content.
-It is bounded in time and ends in a recorded decision, which is how it differs from a BIDS Extension Proposal (BEP).
+It is bounded in time and ends in a recorded decision, which is how it differs from a Brain Imaging Data Structure (BIDS) Extension Proposal (BEP).
 
 An RFC is not for a bug fix, a change that only NEMAR's own code sees, or a choice already settled by an ADR (an RFC may ask to supersede one).
 A small change goes through an ordinary pull request.
@@ -46,7 +46,7 @@ It is derived from the recorded events and the current time by one function, `rf
 | `open`                   | The owner merges the pull request with `discussion` and `opened_at` set |
 | `extended`               | The shepherd records the one extension before the close                 |
 | `final-comment`          | The shepherd posts the summary of comments and a proposed disposition   |
-| `closed`                 | The close passes; the thread is locked; a decision is awaited           |
+| `closed`                 | The close passes; the daily clock locks the thread; a decision is awaited |
 | `accepted` or `rejected` | The decision pull request merges                                        |
 | `withdrawn`              | The author or the shepherd withdraws it, at any time before a decision  |
 
@@ -60,7 +60,7 @@ The draft takes its number when the pull request is created: the next number unu
 A number is never reused, even when a draft is withdrawn.
 Start from [`0000-template.md`](0000-template.md).
 
-The body of the pull request carries the opening post: the summary, the numbered questions, the close date in UTC, and how to comment without a GitHub account.
+The body of the pull request carries the opening post: the summary, the numbered questions, the close date in Coordinated Universal Time (UTC), and how to comment without a GitHub account.
 
 ### Opening
 
@@ -78,7 +78,7 @@ The shepherd may grant one extension of at most 14 days, before the close, with 
 
 ### Why the window is short
 
-Reviews today are often helped by AI.
+Reviews today are often helped by artificial intelligence (AI).
 NEMAR welcomes AI-assisted review and contributions when knowledgeable people use the AI and check what it produces.
 With that help, a careful review fits in three weeks, so NEMAR RFCs are fast-paced: at most 21 days, with one extension of at most 14.
 
@@ -86,8 +86,9 @@ With that help, a careful review fits in three weeks, so NEMAR RFCs are fast-pac
 
 The close is `opened_at` plus `window_days` (plus the extension's days) times 24 hours, in UTC, to the minute.
 The opening post prints it, and the index lists it.
-There is no grace period.
-At that instant the thread is locked.
+There is no grace period: a comment posted after the close instant is late, whether or not the thread is locked yet.
+The thread itself is locked by the daily clock run (below), so it stays open for up to about 24 hours after the close.
+A late comment is still in the record: it gets a written disposition like any other, the shepherd marks it as late, and it cannot extend the window or reopen the RFC.
 
 ### One RFC at a time
 
@@ -109,7 +110,10 @@ After that, a material change uses the extension; if the extension is spent, the
 ### Reminders
 
 `rfc-clock` runs daily.
-It posts a reminder in the thread 7 days and 2 days before the close, and at the close it posts a closing comment and locks the thread.
+It runs once a day, at 14:00 UTC.
+It posts a reminder in the thread at the first run on or after the instant 7 days before the close, and again at the first run on or after the instant 2 days before it.
+It locks the thread and posts a closing comment at the first run after the close instant, which is up to about 24 hours later.
+If the lock fails, it posts no closing comment and tries again on the next run.
 It edits no file and decides nothing.
 If GitHub disagrees with the record (a thread that is missing, unlocked after its close, or locked before it), or an RFC has been closed for more than 14 days with no decision, the run fails and says so.
 A silent clock is also visible: the weekly report shows when `rfc-clock` last ran.
@@ -120,6 +124,9 @@ A silent clock is also visible: the weekly report shows when `rfc-clock` last ra
 - **Without one**, write to support@nemar.org.
   A maintainer posts your comment in the thread, with your name only if you agree.
   A comment sent before the close is posted even if the thread has locked by then.
+
+The category `RFCs` is in the Announcement format: only maintainers open a thread, and anyone with a GitHub account comments under the RFC's Discussion.
+Email to support@nemar.org is the fallback for people without an account; the maintainer posts it to the thread with the sender's consent.
 
 Anyone may comment; nobody has to be a NEMAR account holder.
 
@@ -139,7 +146,7 @@ Which outcomes produce an ADR:
 ## Withdrawing
 
 The author or the shepherd may withdraw an RFC at any time before a decision, with `withdrawn_at`, `withdrawn_reason` and `decision: withdrawn`.
-The shepherd posts a note in the thread and locks it by hand; `rfc-clock` does not manage a withdrawn thread.
+The shepherd posts the final comment (a note that the RFC is withdrawn, and why) in the thread and locks it by hand; `rfc-clock` does not manage a withdrawn thread.
 
 ## Announcements
 
@@ -149,7 +156,7 @@ An organization RFC is announced in these places, once, when it opens:
 - a news post on nemar.org;
 - a command-line interface (CLI) notice that expires at the close;
 - a community email to NEMAR account holders under the `rfcs` mail category, with an unsubscribe link in the footer (sent from production only);
-- LinkedIn and the Brain Imaging Data Structure (BIDS) Google group, posted by the owner.
+- LinkedIn and the BIDS Google group, posted by the owner.
 
 A dataset RFC is announced in its thread and by email to the dataset's owner and collaborators.
 Each announcement carries the close instant and the thread's address.
@@ -173,6 +180,7 @@ The check's own clock decides every question about time; a date written in a rec
 
 ## Licenses
 
-Text (`PROCESS.md`, `README.md`, the template and every RFC in `text/`) is licensed CC BY 4.0, and tooling (`src/`, `test/`, `schema/`, `ops/`, `.github/` and configuration) under the MIT License.
+Text (`PROCESS.md`, `README.md`, the template and every RFC in `text/`) is licensed Creative Commons Attribution 4.0 International (CC BY 4.0).
+Tooling (`src/`, `test/`, `schema/`, `ops/`, `.github/`, configuration, and the agent instructions `AGENTS.md` and `CLAUDE.md`) is under the MIT License.
 By proposing text you agree to license it under CC BY 4.0.
 See [`LICENSE.md`](LICENSE.md).
