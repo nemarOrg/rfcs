@@ -1,3 +1,4 @@
+import { parseNow } from "./env.ts";
 import { loadHead } from "./load.ts";
 import { closeInstant, closeMs, DAY_MS, instant, OPEN_STATES, rfcStatus } from "./status.ts";
 import type { RfcFrontMatter } from "./types.ts";
@@ -29,8 +30,8 @@ export const OVERDUE_DECISION_DAYS = 14;
 
 const SUPPORT = "support@nemar.org";
 
-function rfcLabel(record: RfcFrontMatter): string {
-  return `RFC ${String(record.number).padStart(4, "0")}`;
+function rfcLabel(number: number): string {
+  return `RFC ${String(number).padStart(4, "0")}`;
 }
 
 /** The hidden marker that makes a post happen once per close instant. */
@@ -42,7 +43,7 @@ function reminderBody(record: RfcFrontMatter, kind: "remind-7d" | "remind-2d", m
   const days = Math.max(1, Math.round(msLeft / DAY_MS));
   return [
     marker(kind, record),
-    `${rfcLabel(record)} closes in about ${days} ${days === 1 ? "day" : "days"}, at ${closeInstant(record)} UTC.`,
+    `${rfcLabel(record.number)} closes in about ${days} ${days === 1 ? "day" : "days"}, at ${closeInstant(record)} UTC.`,
     "",
     `Comment here with a GitHub account, or write to ${SUPPORT}: a maintainer posts comments sent before the close, with your name only if you agree.`,
   ].join("\n");
@@ -51,7 +52,8 @@ function reminderBody(record: RfcFrontMatter, kind: "remind-7d" | "remind-2d", m
 function closedBody(record: RfcFrontMatter): string {
   return [
     marker("closed", record),
-    `The comment period for ${rfcLabel(record)} ended at ${closeInstant(record)} UTC, and this thread is now locked.`,
+    `The comment period for ${rfcLabel(record.number)} ended at ${closeInstant(record)} UTC.`,
+    "This thread is locked by the daily clock at its first run after the close, so a comment posted between the close and the lock is still in the record; it receives a written disposition and is marked late.",
     "",
     `A comment sent to ${SUPPORT} before the close is still posted here by a maintainer.`,
     "Every comment receives a written disposition before a decision, and the decision is recorded in the RFC file in this repository.",
@@ -75,9 +77,9 @@ export function planClockActions(
   for (const record of [...records].sort((a, b) => a.number - b.number)) {
     const status = rfcStatus(record, now);
     if (status === "draft" || status === "withdrawn") continue;
-    const label = rfcLabel(record);
+    const label = rfcLabel(record.number);
     const close = closeMs(record);
-    if (record.discussion === null || close === null) continue;
+    if (record.discussion === null || record.opened_at === null || close === null) continue;
     const thread = threads[record.discussion];
     if (thread == null) {
       failures.push(`${label}: its thread ${record.discussion} does not exist on GitHub`); // rule: thread-missing
@@ -93,7 +95,7 @@ export function planClockActions(
         ); // rule: locked-early
       }
       const msLeft = close - nowMs;
-      const opened = instant(record.opened_at as string);
+      const opened = instant(record.opened_at);
       if (msLeft <= 2 * DAY_MS) {
         if (!posted("remind-2d")) {
           // rule: remind-2d
@@ -197,7 +199,7 @@ export async function fetchThread(
   let locked = false;
   const comments: string[] = [];
   let after: string | null = null;
-  for (;;) {
+  for (let page = 1; ; page++) {
     const result: GraphqlResponse = await graphql(client, THREAD_QUERY, {
       owner,
       name,
@@ -218,12 +220,18 @@ export async function fetchThread(
       | null
       | undefined;
     const discussion = repository?.discussion;
-    if (discussion == null) {
-      const unexpected = (result.errors ?? []).filter((e) => e.type !== "NOT_FOUND");
-      if (unexpected.length > 0) {
-        throw new Error(`GitHub GraphQL: ${unexpected.map((e) => e.message).join("; ")}`);
-      }
-      return null;
+    const errors = result.errors ?? [];
+    // Only a thread that GitHub reports as not found, on the first page, is "missing".
+    // Any other error, or a thread that vanishes between pages, is an error and fails the run.
+    const missing =
+      page === 1 &&
+      repository != null &&
+      discussion === null &&
+      errors.every((e) => e.type === "NOT_FOUND");
+    if (missing) return null;
+    if (errors.length > 0 || discussion == null) {
+      const detail = errors.map((e) => e.message).join("; ") || "no thread in the answer";
+      throw new Error(`GitHub GraphQL (${discussionUrl}, page ${page}): ${detail}`);
     }
     id = discussion.id;
     locked = discussion.locked;
@@ -245,8 +253,12 @@ export async function executeActions(
   actions: readonly ClockAction[],
 ): Promise<string[]> {
   const failures: string[] = [];
+  // A failed lock stops the rest of that RFC's actions: the closing comment carries the marker
+  // that tells the next run the thread was locked, so it is not posted until the lock succeeds.
+  const lockFailed = new Set<number>();
   for (const action of actions) {
-    const label = rfcLabel({ number: action.rfc } as RfcFrontMatter);
+    const label = rfcLabel(action.rfc);
+    if (lockFailed.has(action.rfc)) continue;
     try {
       const result =
         action.kind === "lock"
@@ -258,6 +270,7 @@ export async function executeActions(
       console.log(`${label}: ${action.kind === "lock" ? "locked the thread" : "posted a comment"}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (action.kind === "lock") lockFailed.add(action.rfc);
       failures.push(
         `${label}: could not ${action.kind === "lock" ? "lock the thread" : "post a comment"}: ${message}`,
       );
@@ -301,7 +314,7 @@ async function main(): Promise<number> {
   const client: GraphqlClient | null = token
     ? { url: process.env.GITHUB_GRAPHQL_URL ?? "https://api.github.com/graphql", token }
     : null;
-  const now = process.env.RFC_CLOCK_NOW ? new Date(process.env.RFC_CLOCK_NOW) : new Date();
+  const now = parseNow(process.env.RFC_CLOCK_NOW, "RFC_CLOCK_NOW");
   const failures = await runClock(
     loaded.files.map((file) => file.record),
     client,
