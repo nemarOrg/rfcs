@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import {
   fetchThread,
   type GraphqlClient,
@@ -75,6 +76,14 @@ describe("rfc-clock against a stand-in for GitHub", () => {
     expect(postsOf(s, "closed")).toBe(1);
   });
 
+  test("the closing comment says the lock follows the first daily run after the close", async () => {
+    const { stub: s, client } = stub({ 7: {} });
+    await silently(() => runClock([RFC], client, nowAt(21, 3)));
+    const body = s.threads.get(7)?.comments[0] ?? "";
+    expect(body).toContain("first run after the close");
+    expect(body).toContain("marked late");
+  });
+
   test("the clock does not lock a minute before the close", async () => {
     const { stub: s, client } = stub({ 7: {} });
     await silently(() => runClock([RFC], client, new Date(nowAt(21).getTime() - 60_000)));
@@ -136,14 +145,30 @@ describe("rfc-clock against a stand-in for GitHub", () => {
     expect(postsOf(s, "closed")).toBe(1);
   });
 
-  test("a failed lock is reported and the closing comment is still posted", async () => {
-    const started = startGraphqlStub({ 7: {}, 8: {} }, 2, { failLock: true });
+  test("a failed lock posts no closing comment, and a later run re-locks", async () => {
+    const started = startGraphqlStub({ 7: {} }, 2, { failLock: true });
     stubs.push(started);
     const client: GraphqlClient = { url: started.url, token: started.token };
     const failures = await silently(() => runClock([RFC], client, nowAt(21)));
     expect(failures.join("\n")).toContain("could not lock the thread");
     expect(started.threads.get(7)?.locked).toBe(false);
+    // No closing comment and so no marker: the next run is not mistaken for "locked, then unlocked".
+    expect(postsOf(started, "closed")).toBe(0);
+    started.options.failLock = false;
+    expect(await silently(() => runClock([RFC], client, nowAt(21, 6)))).toEqual([]);
+    expect(started.threads.get(7)?.locked).toBe(true);
     expect(postsOf(started, "closed")).toBe(1);
+  });
+
+  test("each RFC with a failed lock is reported and gets no closing comment", async () => {
+    const started = startGraphqlStub({ 7: {}, 8: {} }, 2, { failLock: true });
+    stubs.push(started);
+    const client: GraphqlClient = { url: started.url, token: started.token };
+    const other = rec({ number: 8, window_days: 7, discussion: `${DISCUSSION_BASE}/8` });
+    const failures = await silently(() => runClock([RFC, other], client, nowAt(21)));
+    expect(failures.filter((f) => f.includes("could not lock"))).toHaveLength(2);
+    expect(started.threads.get(7)?.comments).toEqual([]);
+    expect(started.threads.get(8)?.comments).toEqual([]);
   });
 
   test("without a token the clock stops, unless there is nothing to do", async () => {
@@ -152,6 +177,26 @@ describe("rfc-clock against a stand-in for GitHub", () => {
       await silently(() => runClock([rec({ opened_at: null, discussion: null })], null, nowAt(1))),
     ).toEqual([]);
     expect(silently(() => runClock([RFC], null, nowAt(1)))).rejects.toThrow("GITHUB_TOKEN");
+  });
+
+  test("a GraphQL error other than NOT_FOUND is an error, not a missing thread", async () => {
+    for (const threadError of ["forbidden", "partial", "repo-missing"] as const) {
+      const { stub: s, client } = stub({ 7: {} });
+      s.options.threadError = threadError;
+      expect(fetchThread(client, URL)).rejects.toThrow("GitHub GraphQL");
+    }
+  });
+
+  test("a thread that vanishes on page 2 is an error", async () => {
+    const filler = Array.from({ length: 5 }, (_, i) => `comment ${i}`);
+    const { stub: s, client } = stub({ 7: { comments: filler } }, 2);
+    s.options.threadError = "vanish-on-page-2";
+    expect(fetchThread(client, URL)).rejects.toThrow("page 2");
+  });
+
+  test("a NOT_FOUND answer on page 1 is a missing thread", async () => {
+    const { client } = stub({});
+    expect(await fetchThread(client, URL)).toBeNull();
   });
 
   test("a wrong token is an error, not a silent pass", async () => {
@@ -228,5 +273,18 @@ describe("planClockActions", () => {
       nowAt(90),
     );
     expect(plan).toEqual({ actions: [], failures: [] });
+  });
+});
+
+describe("rfc-clock environment", () => {
+  test("a RFC_CLOCK_NOW that is not a timestamp stops the clock", async () => {
+    const proc = Bun.spawn(["bun", "run", "src/clock.ts"], {
+      cwd: join(import.meta.dir, ".."),
+      env: { ...process.env, RFC_CLOCK_NOW: "yesterday-ish" },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(await proc.exited).toBe(2);
+    expect(await new Response(proc.stderr).text()).toContain("RFC_CLOCK_NOW");
   });
 });

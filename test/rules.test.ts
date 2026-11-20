@@ -53,6 +53,13 @@ describe("extension", () => {
     expect(found).not.toContain("extension-in-window");
   });
 
+  test("an extension on a file new to the base branch is refused after the close", () => {
+    // The base is readable but has no such file: the guard must not be skipped.
+    const head = [file(rec({ extension: EXT(7, 10) }))];
+    const found = run({ head, base: [], now: nowAt(21, 2) });
+    expect(found).toContain("extension-after-close");
+  });
+
   test("an unchanged extension passes a later check run after the close", () => {
     const record = rec({ extension: EXT(7, 10) });
     expect(run({ head: [file(record)], base: [file(record)], now: nowAt(40) })).not.toContain(
@@ -361,6 +368,12 @@ describe("numbers and names", () => {
     expect(run({ head: [a, b], now: nowAt(8) })).not.toContain("supersedes-exists");
     const self = file(rec({ number: 2, supersedes_rfc: 2 }));
     expect(run({ head: [self], now: nowAt(1) })).toContain("supersedes-exists");
+  });
+
+  test("a base file that cannot be read is refused unless the head repairs it", () => {
+    const broken = [{ path: "text/0001-an-example-rfc.md", problems: ["not YAML"] }];
+    expect(run({ head: [], base: [], baseUnreadable: broken })).toContain("base-unreadable");
+    expect(run({ head: [file(rec())], base: [], baseUnreadable: broken })).toEqual([]);
   });
 
   test("unreadable front matter is reported", () => {

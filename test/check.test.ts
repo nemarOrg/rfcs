@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runCheck } from "../src/check.ts";
+import { pullRequestNumber, runCheck } from "../src/check.ts";
 import { fetchPrClaims } from "../src/github.ts";
 import { loadBase } from "../src/load.ts";
 import { at, file, markdown, nowAt, readmeFor, rec } from "./helpers.ts";
@@ -204,5 +204,135 @@ describe("next-number", () => {
     });
     expect((await new Response(proc.stdout).text()).trim()).toBe("0010");
     expect(await proc.exited).toBe(0);
+  });
+});
+
+describe("pullRequestNumber", () => {
+  function eventFile(content: string): string {
+    const dir = tempRepo();
+    const path = join(dir, "event.json");
+    writeFileSync(path, content);
+    return path;
+  }
+
+  test("it reads the number from the event JSON on a pull_request event", () => {
+    const path = eventFile(JSON.stringify({ pull_request: { number: 17 } }));
+    expect(pullRequestNumber({ GITHUB_EVENT_NAME: "pull_request", GITHUB_EVENT_PATH: path })).toBe(
+      17,
+    );
+  });
+
+  test("a pull_request event with no number fails closed", () => {
+    const path = eventFile(JSON.stringify({ action: "opened" }));
+    expect(() =>
+      pullRequestNumber({ GITHUB_EVENT_NAME: "pull_request", GITHUB_EVENT_PATH: path }),
+    ).toThrow("without a pull request number");
+    expect(() => pullRequestNumber({ GITHUB_EVENT_NAME: "pull_request" })).toThrow(
+      "GITHUB_EVENT_PATH",
+    );
+  });
+
+  test("a push has no pull request number", () => {
+    expect(pullRequestNumber({ GITHUB_EVENT_NAME: "push" })).toBeNull();
+    expect(pullRequestNumber({})).toBeNull();
+  });
+
+  test("RFC_PR_NUMBER must be a positive integer", () => {
+    expect(pullRequestNumber({ RFC_PR_NUMBER: "12" })).toBe(12);
+    for (const bad of ["abc", "1.5", "-3", "0", "12 "]) {
+      expect(() => pullRequestNumber({ RFC_PR_NUMBER: bad })).toThrow("RFC_PR_NUMBER");
+    }
+  });
+});
+
+describe("dates from the environment", () => {
+  test("a bad --now or RFC_CHECK_NOW stops the check", async () => {
+    const flag = await cli(["--now", "tomorrow"]);
+    expect(flag.code).toBe(2);
+    expect(flag.stderr).toContain("--now");
+    const env = await cli([], { ...localEnv(), RFC_CHECK_NOW: "later" });
+    expect(env.code).toBe(2);
+    expect(env.stderr).toContain("RFC_CHECK_NOW");
+  });
+
+  test("a bad RFC_PR_NUMBER stops the check", async () => {
+    const result = await cli([], { ...localEnv(), RFC_PR_NUMBER: "seven" });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("RFC_PR_NUMBER");
+  });
+});
+
+describe("the base branch's unreadable files", () => {
+  test("a base file that is not valid is refused, not silently skipped", async () => {
+    const dir = tempRepo();
+    writeFileSync(join(dir, "text", "0001-broken.md"), "not front matter");
+    writeFileSync(join(dir, "README.md"), readmeFor([]));
+    git(dir, "init", "-q", "-b", "main");
+    git(dir, "add", ".");
+    git(dir, "commit", "-q", "-m", "base");
+    expect(loadBase(dir, "HEAD").unreadable).toHaveLength(1);
+    rmSync(join(dir, "text", "0001-broken.md"));
+    const report = await runCheck(
+      { root: dir, now: nowAt(1), baseRef: "HEAD", prNumber: null },
+      {},
+    );
+    expect(report.violations.map((v) => v.rule)).toContain("base-unreadable");
+  });
+});
+
+describe("GitHub REST failures", () => {
+  test("a failing list call and a failing per-PR files call both fail the fetch", async () => {
+    const listFails = startRestStub("nemarOrg/rfcs", [], { list: 503 });
+    const filesFail = startRestStub("nemarOrg/rfcs", [{ number: 4, files: [] }], {
+      files: { pr: 4, status: 500 },
+    });
+    stubs.push(listFails, filesFail);
+    const options = (url: string) => ({ apiUrl: url, repo: "nemarOrg/rfcs" });
+    expect(fetchPrClaims(options(listFails.url))).rejects.toThrow("/pulls?state=all");
+    expect(fetchPrClaims(options(listFails.url))).rejects.toThrow("503");
+    expect(fetchPrClaims(options(filesFail.url))).rejects.toThrow("/pulls/4/files");
+    expect(fetchPrClaims(options(filesFail.url))).rejects.toThrow("500");
+  });
+
+  test("the check fails, with exit 2, when the API fails", async () => {
+    const rest = startRestStub("nemarOrg/rfcs", [], { list: 403 });
+    stubs.push(rest);
+    const result = await cli(["--base-ref", "HEAD"], {
+      ...localEnv(),
+      GITHUB_REPOSITORY: "nemarOrg/rfcs",
+      GITHUB_API_URL: rest.url,
+      RFC_PR_NUMBER: "5",
+    });
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain("403");
+  });
+});
+
+describe("ops/ruleset-main.json", () => {
+  const ruleset = JSON.parse(readFileSync(join(ROOT, "ops/ruleset-main.json"), "utf8"));
+  const required = ruleset.rules.find((r: { type: string }) => r.type === "required_status_checks");
+
+  test("it requires rfc-check against the latest main", () => {
+    expect(required.parameters.strict_required_status_checks_policy).toBe(true);
+    expect(required.parameters.required_status_checks).toEqual([{ context: "rfc-check" }]);
+  });
+
+  test("it blocks deletion and force-pushes", () => {
+    const types = ruleset.rules.map((r: { type: string }) => r.type);
+    expect(types).toContain("deletion");
+    expect(types).toContain("non_fast_forward");
+  });
+
+  test("repository admins may bypass through a pull request only", () => {
+    expect(ruleset.bypass_actors).toEqual([
+      { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
+    ]);
+  });
+});
+
+describe("the rfc-check workflow", () => {
+  test("a push to main is never cancelled by a later run", () => {
+    const text = readFileSync(join(ROOT, ".github/workflows/rfc-check.yml"), "utf8");
+    expect(text).toContain(`cancel-in-progress: ${"$"}{{ github.event_name == 'pull_request' }}`);
   });
 });
