@@ -97,8 +97,8 @@ This RFC is its first public review.
 
 ### Version 2 cannot represent time that is not one uniform, continuous axis
 
-Quoted specification text in this RFC is Copyright (c) 2026 NEMAR contributors and is under the World Wide Web Consortium (W3C) Software and Document License, not under this RFC's own license;
-the copyright notice and the text of the W3C Software and Document License are in [`LICENSE.md` at tag `2.0.0`](https://github.com/nemarOrg/biosig-zarr/blob/2.0.0/LICENSE.md).
+Quoted specification text in this RFC is Copyright (c) 2026 the biosig-zarr contributors and is under the World Wide Web Consortium (W3C) Software and Document License, not under this RFC's own license, Creative Commons Attribution 4.0 International (CC BY 4.0);
+the copyright notice and the text of the W3C Software and Document License are in [`LICENSE.md` at tag `2.0.2`](https://github.com/nemarOrg/biosig-zarr/blob/2.0.2/LICENSE.md), a release whose specification text is the `2.0.0` text unchanged.
 Each quotation links its source lines, as the W3C Software and Document License asks of a copy.
 
 The "Time axis" paragraph of the `2.0.0` text, in the section "Level-0 array" ([lines 363 to 365](https://github.com/nemarOrg/biosig-zarr/blob/2.0.0/spec/index.md#L363-L365)), reads:
@@ -714,7 +714,7 @@ Arguments that one of these was decided wrongly are still welcome as issues; the
 | --- | --- |
 | A store is not an NWB container and will not be made NWB-conformant; any NWB output is a stateless export. | nemar-cli ADR 0128, Decision. |
 | One package holds one recording. It is an alternative to a data file, not to a dataset. | ADR 0128, Context and Consequences; the specification, "Scope and non-goals". |
-| The license model: specification text under the World Wide Web Consortium (W3C) Software and Document License; schemas, test vectors and code under the Apache License 2.0. | ADR 0128, Consequences; ADR 0131, Decision 1; neuromechanist/biosigio issue 179. |
+| The license model: specification text under the W3C Software and Document License; schemas, test vectors and code under the Apache License 2.0. | ADR 0128, Consequences; ADR 0131, Decision 1; neuromechanist/biosigio issue 179. |
 | The specification lives in nemarOrg/biosig-zarr, and the `.bzx` packing rules are NEMAR's own, not a dependency on OME-Zarr RFC-9. | nemar-cli ADR 0131, Decisions 1 and 2. |
 | No store's metadata is patched in place; the tag rename arrives through re-conversion. | ADR 0128, "One copy, and how drift is refused"; ADR 0131, Decision 3. |
 
