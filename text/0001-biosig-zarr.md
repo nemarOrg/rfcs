@@ -955,7 +955,7 @@ An accepted text that changes after comments lists each change in its change log
 - Before any version 3 store reaches NEMAR's serving bucket, every NEMAR reader refuses a store whose `format_version` is above 2, and the dataset index records each store's `format_version`.
   This is a rollout rule, not a comment item.
 - The `3.0.0-draft.3` text is revised from the comments and tagged `3.0.0`.
-  The release gets a NEMAR Digital Object Identifier (DOI) through NEMAR's planned DOI registry.
+  The release gets a Digital Object Identifier (DOI) issued through nemar-doi, NEMAR's planned DOI service, which registers it and does not own it.
 - The specification decision is recorded in nemarOrg/biosig-zarr; NEMAR's profile and rollout decisions are recorded in nemar-cli, each linking this RFC.
 - The conformance test files live in nemarOrg/biosig-zarr; NEMAR's own code vendors them by digest.
 - biosigIO gains a version 3 writer and reader; NEMAR's readers gain the interval, start time and missing value rules.
