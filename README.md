@@ -21,7 +21,9 @@ The index is generated from the records in `text/` by `bun run index`, and `rfc-
 It lists what each record says; the live state of an RFC (open, final comment, closed) is on its thread.
 
 <!-- rfc-index:start -->
-No RFC has been proposed yet.
+| Number | Title | Scope | Opened (UTC) | Closes (UTC) | Decision | Thread |
+| --- | --- | --- | --- | --- | --- | --- |
+| [0001](text/0001-biosig-zarr.md) | biosig-zarr: a Zarr format for biosignal recordings, with .bzx as its single-file form | org | - | - | draft | - |
 <!-- rfc-index:end -->
 
 ## Contents
