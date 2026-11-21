@@ -1,6 +1,6 @@
 # Handoff: the RFC program, paused before RFC-0001 opens
 
-Written 2026-11-21 by the manager of the RFC program (manager id `mba-claude-sonnet`), at the end of its session.
+Written 2026-11-21 by the manager of NEMAR's Request for Comments (RFC) program (manager id `mba-claude-sonnet`), at the end of its session.
 Resume in a fresh session from this repository, `/Users/yahya/Documents/git/nemar/rfcs`, not from a worktree.
 Observations learned along the way are in [`.memory/`](../.memory/README.md), one per file.
 
@@ -15,8 +15,7 @@ Opening the RFC (step O5) waits on two things:
 
 1. **The mail epic in production.**
    Epic nemarOrg/nemar-cli#2260 (community mail categories, one-click unsubscribe, recalls), together with the privacy-policy text, must be live in production first (owner, 2026-11-20).
-   On 2026-11-21, phases P1 to P3 were merged into `feature/issue-2260-epic-mail-categories`, and P4 was an open pull request, nemarOrg/nemar-cli#2290.
-   The epic was not yet on `dev`, let alone in production.
+   As of 2026-11-21 19:15 UTC, phases P1 to P4 were merged into `feature/issue-2260-epic-mail-categories` (P4 was nemarOrg/nemar-cli#2290), the epic issue was still open, and the epic was not yet on `dev`, let alone in production.
    That work is outside this program; check its state, do not drive it.
 2. **The owner's go-ahead.**
    Only the owner opens an RFC (this repository's `AGENTS.md`: no agent merges an RFC text pull request, creates a Discussion or posts in a thread).
@@ -43,7 +42,7 @@ The owner opens it with the three steps in nemar-cli's `plan.md`, section 5, "O5
 
 | Step | What | Waits on |
 |---|---|---|
-| A3 | ADR amending nemar-cli ADR 0124 (conformance vectors canonical in biosig-zarr), worktree `rfc-A3` | ADR 0132 reaching nemar-cli `dev` with the mail epic; then merge `dev` into the epic branch and review A3 |
+| A3 | Architecture Decision Record (ADR) amending nemar-cli ADR 0124 (conformance vectors canonical in biosig-zarr), worktree `rfc-A3` | ADR 0132 reaching nemar-cli `dev` with the mail epic; then merge `dev` into the epic branch and review A3 |
 | C3 | Checkpoint: decision draft and follow-through outline | RFC-0001's close instant (21 days after `opened_at`) |
 | V2 | RFC-0002 text (card outline; the lead completes it at C2) | Q16, "For RFC-0002, what does first party mean?", due 2027-01-15 |
 | O6 | Owner opens RFC-0002 | C3; one RFC open at a time |
@@ -51,8 +50,9 @@ The owner opens it with the three steps in nemar-cli's `plan.md`, section 5, "O5
 
 ## The program's state lives in nemar-cli
 
-The plan, the cards, the board and its log are in nemarOrg/nemar-cli, branch `feature/rfc-program` (pushed; last board commit `c5d9f68e`), under `.context/rfc-program/`:
-`board.md` (state), `board-log.md` (decisions and log, append-only), `plan.md`, `runbook.md`, `cards/`, `checkpoints.md`, `risks.md`, `evidence/` (S1's back-catalog scan) and `owner/` (announcement drafts).
+The plan, the cards, the board and its log are in nemarOrg/nemar-cli, branch `feature/rfc-program` (pushed; the board was paused at `cc44c557`), under `.context/rfc-program/`, among others:
+`board.md` (state), `board-log.md` (decisions and log, append-only), `plan.md`, `runbook.md`, `queue.md`, `cards/`, `checkpoints.md`, `risks.md`, `drafts/`, `research/`, `evidence/` (S1's back-catalog scan) and `owner/` (the announcement drafts and `biosigio-179-amendment.md`).
+Step identifiers such as O5, A3, C3 and N1 are rows of the board's Steps table.
 Read the board from origin without a worktree: `git -C /Users/yahya/Documents/git/nemar/nemar-cli fetch origin feature/rfc-program && git -C /Users/yahya/Documents/git/nemar/nemar-cli show origin/feature/rfc-program:.context/rfc-program/board.md`.
 The board helper is `python3 /Users/yahya/.claude/plugins/cache/research-skills/project/0.15.1/skills/manager-loop/scripts/manager_board.py` (the runbook still names 0.12.0).
 It edits a checked-out board, so writing to the board needs a checkout of `feature/rfc-program`; the owner prefers that a session not run inside a worktree, so decide with the owner where the board lives next, or keep the board read-only and record new decisions here until then.
@@ -61,7 +61,7 @@ Never merge `feature/rfc-program` into nemar-cli `dev` without the owner.
 ## What was published on 2026-11-20 and 2026-11-21
 
 - nemarOrg/biosig-zarr releases: `2.0.0`, `2.0.1`, `2.0.2` (Latest, on `509b6897`, the independence release), and the pre-releases `3.0.0-draft.1`, `3.0.0-draft.2` and `3.0.0-draft.3` (on `c0cb7e49`, the text RFC-0001 proposes).
-- biosig-zarr is independent of NEMAR (Q37 to Q42, biosig-zarr ADR 0005): the copyright holder is "the biosig-zarr contributors"; the editor is Seyed Yahya Shirazi in a personal capacity and decides through RFCs in this repository; NEMAR hosts the repository and registers DOIs through nemar-doi as a service, is ready to hand the specification off when it matures, and until then backstops its continuation without deciding its text.
+- biosig-zarr is independent of NEMAR (Q37 to Q42, biosig-zarr ADR 0005): the copyright holder is "the biosig-zarr contributors"; the editor is Seyed Yahya Shirazi in a personal capacity and decides through RFCs in this repository; NEMAR hosts the repository and registers digital object identifiers (DOIs) through nemar-doi as a service, is ready to hand the specification off when it matures, and until then backstops its continuation without deciding its text.
 - Tag `rfc-0001-evidence` in nemarOrg/nemar-cli on `c48405fe`, so the RFC's link to S1's evidence survives whatever happens to the branch.
 - nemarOrg/nemar-cli#2292: nm000411 has no converted stores (conversion failed, no requeue); cause not examined.
 
@@ -78,5 +78,4 @@ Worktrees made during the program, all for work that is merged unless noted:
 
 - nemar-cli: `nemar-cli-worktrees/rfc-program` (the board's checkout), `rfc-A1`, `rfc-A2`, `rfc-A3` (A3 is open, keep it), `rfc-N1`, `rfc-R3`, `rfc-S1`, `rfc-V1`, `rfc-lead-c1`, `rfc-lead-indep`, `lead-b4d`, and the temporary `rfc-devmerge` and `rfc-devmerge2` with branches `rfc-devmerge-tmp` and `rfc-devmerge2-tmp`.
   These worktrees have a symlinked `.git`; see [`.memory/annex-worktree-removal.md`](../.memory/annex-worktree-removal.md).
-- biosig-zarr: `biosig-zarr-worktrees/b5`, `b5a`, `b7`, `b7b`, and a prunable `wt-pin`; after removing them, run `git -C /Users/yahya/Documents/git/nemar/biosig-zarr config --unset extensions.worktreeConfig`.
-- `/tmp/claude-guard`.
+- biosig-zarr: `biosig-zarr-worktrees/b5`, `b5a`, `b7` and `b7b`, plus a prunable entry whose directory is already gone (`git -C /Users/yahya/Documents/git/nemar/biosig-zarr worktree prune` clears it); after removing them, run `git -C /Users/yahya/Documents/git/nemar/biosig-zarr config --unset extensions.worktreeConfig`.
