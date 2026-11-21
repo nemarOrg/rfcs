@@ -55,3 +55,8 @@ A local `Bun.serve` stand-in for GitHub's API is allowed, to test a client's beh
 American English; no em-dashes; spell out an abbreviation on first use; semantic line breaks in Markdown (one sentence per line).
 Text posted to GitHub keeps each paragraph on one line.
 Commit subjects are under 50 characters, with no emojis and no AI or co-author attribution.
+
+## Where else to look
+
+- [`.context/handoff.md`](.context/handoff.md): where NEMAR's RFC program stands, and what to do when RFC-0001 can open.
+- [`.memory/`](.memory/README.md): observations learned while working here, one per file, binding nobody.
