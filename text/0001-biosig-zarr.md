@@ -50,6 +50,7 @@ other physiological recordings, motion and wearable sensors,
 and from the people who build Zarr tools.
 The RFC also proposes `format_version` 3, to fix two things version 2 cannot express.
 First, a version 2 store has one uniform time axis, so it cannot say that a recording paused, that a stream was sampled irregularly, or that a signal is sparse.
+At least 978 of the stores NEMAR serves were converted from a source with a measured gap (see "Problem").
 Second, a version 2 store records how samples are stored, but not the resolution of the source recording they came from.
 
 This RFC proposes normative changes to the text tagged `2.0.0`, which is version 2 as NEMAR serves it today.
@@ -147,7 +148,14 @@ A BrainVision file with a second "New Segment" marker five seconds after the fir
 The reports are [neuromechanist/biosigio#180](https://github.com/neuromechanist/biosigio/issues/180) (opened 2026-11-20)
 and [mne-tools/mne-python#13429](https://github.com/mne-tools/mne-python/issues/13429) (opened 2025-09-25); both were open on 2026-11-20.
 The reproduction used synthetic files.
-We have not yet counted how many recordings NEMAR holds are affected; a scan of file headers that reads no samples will answer that before any re-conversion starts.
+We then scanned the source files of NEMAR's public datasets for gaps, read-only, on 2026-11-20 and 2026-11-21 ([the count, with its method and raw outputs](https://github.com/nemarOrg/nemar-cli/blob/rfc-0001-evidence/.context/rfc-program/evidence/s1-catalog.md)).
+36 datasets hold sources with a measured gap, and 978 of the 231,259 stores (0.42%) were converted from those sources:
+777 from BrainVision recordings whose dated "New Segment" markers lie further apart than the samples between them (a few, with gaps under 0.1 s, are weak evidence), 199 from FIF files with acquisition skips, and 2 from EDF+D files with gaps.
+547 more stores come from sources that can be discontinuous where the markers do not settle it:
+528 from BrainVision recordings with several undated segments (question 21), and 19 from BrainVision recordings whose segment dates overlap or run backward (question 18).
+We did not test which of these stores keep the gap.
+For the two EDF+D stores, the serving index gives each a duration shorter than the start time of the source's last record, which suggests that the gap was dropped; this is inferred from the index, and the stores' samples were not read.
+The counts are lower bounds: only 952 of the 12,164 FIF files were measured, 195 BrainVision marker files were missing from the listing or unreadable, and compressed FIF files and EEGLAB, XDF, Neuroscan and General Data Format files were not scanned.
 
 A version 2 store cannot show the problem even when the writer knows about it, because it has no field that claims continuity.
 BIDS contributors have raised the same limit (all links checked 2026-11-20):
@@ -960,8 +968,10 @@ An accepted text that changes after comments lists each change in its change log
 - The conformance test files live in nemarOrg/biosig-zarr; NEMAR's own code vendors them by digest.
 - biosigIO gains a version 3 writer and reader; NEMAR's readers gain the interval, start time and missing value rules.
 - NEMAR re-converts its stores through the normal queue, recordings whose source can be discontinuous first, and states how long version 2 and version 3 stores coexist.
+  By the count under "Problem", that first set is at least 1,525 stores, whose sources are in 56 datasets.
   The cost is the compute of a full re-conversion of the catalog, spread over the queue's normal time.
 - Until then, biosigIO is to refuse discontinuous EDF+D and BDF+D sources with gaps ([neuromechanist/biosigio#180](https://github.com/neuromechanist/biosigio/issues/180)), so no new store repeats the shifted-samples defect.
+  In the catalog counted under "Problem", that refusal concerns one dataset: 102 of the 1,728 EDF+D files have gaps, all in `nm000456` (51 recordings, each present twice in the dataset), the other 1,626 are labeled discontinuous but have none, and none of the 66,340 BDF files is BDF+D.
 - Version 2 stores stay readable throughout.
 
 None of that work is part of this RFC, and none of it starts before the decision.
@@ -1013,6 +1023,7 @@ That date is also the earliest we can show that NEMAR served stores; earlier con
 - NEMAR's store contract and format stability policy: <https://docs.nemar.org/platform/zarr/store-contract/>, <https://docs.nemar.org/platform/zarr/format-stability/>
 - biosigIO: <https://github.com/neuromechanist/biosigio>
 - The gap defect: <https://github.com/neuromechanist/biosigio/issues/180>, <https://github.com/mne-tools/mne-python/issues/13429>
+- The count of the back catalog's discontinuous sources: <https://github.com/nemarOrg/nemar-cli/blob/rfc-0001-evidence/.context/rfc-program/evidence/s1-catalog.md> (tag `rfc-0001-evidence`, commit `c48405fe`)
 - OME-Zarr RFC-9: <https://ngff.openmicroscopy.org/rfc/9/>
 - `hdmf-zarr`: <https://nwb.org/tools/core/hdmf-zarr/>, <https://github.com/hdmf-dev/hdmf-zarr>
 - BIDS: BEP 045 <https://bids.neuroimaging.io/extensions/beps/bep_045.html> and <https://github.com/bids-standard/bids-specification/pull/2267>; issues [2313](https://github.com/bids-standard/bids-specification/issues/2313), [1771](https://github.com/bids-standard/bids-specification/issues/1771), [1796](https://github.com/bids-standard/bids-specification/issues/1796) and [2463](https://github.com/bids-standard/bids-specification/issues/2463)
@@ -1023,3 +1034,4 @@ That date is also the earliest we can show that NEMAR served stores; earlier con
 
 - 2026-11-20: first draft, revised after an internal review the same day.
 - 2026-11-21: points at `3.0.0-draft.3`, compared against `2.0.2`, and states that the specification is independent of NEMAR since 2026-11-20 (biosig-zarr ADR 0005).
+- 2026-11-21: counts the served stores whose source has a measured gap or can be discontinuous, from a read-only scan of the back catalog, and dates the `2.0.2` release in "History of the format".
