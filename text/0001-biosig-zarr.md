@@ -23,7 +23,7 @@ withdrawn_reason: null
 # NEMAR RFC 0001: biosig-zarr, with `.bzx` as its single-file form
 
 The specification text this Request for Comments (RFC) proposes is the comparison
-[`2.0.1...3.0.0-draft.2`](https://github.com/nemarOrg/biosig-zarr/compare/2.0.1...3.0.0-draft.2) in nemarOrg/biosig-zarr.
+[`2.0.2...3.0.0-draft.3`](https://github.com/nemarOrg/biosig-zarr/compare/2.0.2...3.0.0-draft.3) in nemarOrg/biosig-zarr.
 
 ## Summary
 
@@ -53,7 +53,7 @@ First, a version 2 store has one uniform time axis, so it cannot say that a reco
 Second, a version 2 store records how samples are stored, but not the resolution of the source recording they came from.
 
 This RFC proposes normative changes to the text tagged `2.0.0`, which is version 2 as NEMAR serves it today.
-The proposed text is tagged `3.0.0-draft.2` when the RFC opens, and becomes `3.0.0` only if the RFC is accepted.
+The proposed text is tagged `3.0.0-draft.3` when the RFC opens, and becomes `3.0.0` only if the RFC is accepted.
 
 ## Scope
 
@@ -78,8 +78,8 @@ Everything in the version 2 text is open for comment, including its 33 open ques
 and so is everything this RFC proposes for version 3.
 The items under "Decided, and out of scope for comment" are closed, each with the record that closed it.
 
-When the RFC opens, nemarOrg/biosig-zarr holds, at the tag `3.0.0-draft.2`, the proposed text, its JavaScript Object Notation (JSON) schemas ([`schemas/`](https://github.com/nemarOrg/biosig-zarr/tree/3.0.0-draft.2/schemas), with the version 3 ones in [`schemas/v3/`](https://github.com/nemarOrg/biosig-zarr/tree/3.0.0-draft.2/schemas/v3)),
-and 20 conformance vectors cut from one real recording ([`conformance/`](https://github.com/nemarOrg/biosig-zarr/tree/3.0.0-draft.2/conformance), described in its [`README.md`](https://github.com/nemarOrg/biosig-zarr/blob/3.0.0-draft.2/conformance/README.md) and listed in [`manifest.json`](https://github.com/nemarOrg/biosig-zarr/blob/3.0.0-draft.2/conformance/manifest.json)).
+When the RFC opens, nemarOrg/biosig-zarr holds, at the tag `3.0.0-draft.3`, the proposed text, its JavaScript Object Notation (JSON) schemas ([`schemas/`](https://github.com/nemarOrg/biosig-zarr/tree/3.0.0-draft.3/schemas), with the version 3 ones in [`schemas/v3/`](https://github.com/nemarOrg/biosig-zarr/tree/3.0.0-draft.3/schemas/v3)),
+and 20 conformance vectors cut from one real recording ([`conformance/`](https://github.com/nemarOrg/biosig-zarr/tree/3.0.0-draft.3/conformance), described in its [`README.md`](https://github.com/nemarOrg/biosig-zarr/blob/3.0.0-draft.3/conformance/README.md) and listed in [`manifest.json`](https://github.com/nemarOrg/biosig-zarr/blob/3.0.0-draft.3/conformance/manifest.json)).
 The suite has at least one case for each of the four reader-safety layers of the proposal that fails when the check is removed,
 the 10 Hz gap case of "Events and the onset-to-sample rule" (`v3-gap-10hz`), and an exact copy with a gap and no declared missing value (`v3-gap-exact-copy`).
 No tool writes or reads `.bzx` yet, and no version 3 writer exists.
@@ -450,7 +450,7 @@ Each layer is a refusal rule that a conformance case can test: the case passes w
    `valid_intervals` is in effect when it holds more than one interval.
    `missing_value` is in effect when it is not `null` on level 0.
 
-The conformance suite at `3.0.0-draft.2` in nemarOrg/biosig-zarr has at least one such case for each of the four layers.
+The conformance suite at `3.0.0-draft.3` in nemarOrg/biosig-zarr has at least one such case for each of the four layers.
 
 #### Events and the onset-to-sample rule
 
@@ -947,7 +947,7 @@ An accepted text that changes after comments lists each change in its change log
 
 - Before any version 3 store reaches NEMAR's serving bucket, every NEMAR reader refuses a store whose `format_version` is above 2, and the dataset index records each store's `format_version`.
   This is a rollout rule, not a comment item.
-- The `3.0.0-draft.2` text is revised from the comments and tagged `3.0.0`.
+- The `3.0.0-draft.3` text is revised from the comments and tagged `3.0.0`.
   The release gets a NEMAR Digital Object Identifier (DOI) through NEMAR's planned DOI registry.
 - The specification decision is recorded in nemarOrg/biosig-zarr; NEMAR's profile and rollout decisions are recorded in nemar-cli, each linking this RFC.
 - The conformance test files live in nemarOrg/biosig-zarr; NEMAR's own code vendors them by digest.
@@ -971,7 +971,7 @@ The dates come from the Git history and release tags of biosigIO and from NEMAR'
 | 2, grown by addition | 2026-07-07 to 2026-10-05 | New attributes with no version change: the count of replaced non-finite samples (biosigIO 1.2.1, 2026-07-07); the declared view pyramid and chunk geometry (1.2.6, 2026-09-02); unit handling from BIDS `channels.tsv` (1.2.7, 2026-09-02); the subject-information exclusion mark (1.2.11, 2026-10-05). | The specification, "What changes the version"; biosigIO release tags. |
 | 2, specified | 2026-11-18 | No change to stores. The layout was written down as a specification that implementations follow, named `biosig-zarr`, with `.bzx` proposed. | nemar-cli ADR 0128 (accepted 2026-11-18); the pre-beta specification on docs.nemar.org (nemarOrg/docs pull request 122). |
 | 2, moved | 2026-11-20 | No change to stores or to the text. The text moved to nemarOrg/biosig-zarr and was released as `2.0.0`. | nemar-cli ADR 0131; nemarOrg/biosig-zarr release `2.0.0`. |
-| 3 (proposed) | This RFC | The time model (group kinds, `valid_intervals`, `missing_value`, `start_time`) and source resolution (`source_*` fields, `derivation`). | This document; tag `3.0.0-draft.2` when it opens, `3.0.0` only if accepted. |
+| 3 (proposed) | This RFC | The time model (group kinds, `valid_intervals`, `missing_value`, `start_time`) and source resolution (`source_*` fields, `derivation`). | This document; tag `3.0.0-draft.3` when it opens, `3.0.0` only if accepted. |
 
 NEMAR decisions that shaped how stores are made, each an accepted nemar-cli ADR:
 only raw recordings are converted (ADR 0027, 2026-08-20);
@@ -1001,7 +1001,7 @@ That date is also the earliest we can show that NEMAR served stores; earlier con
 ## References
 
 - The specification, version 2: <https://github.com/nemarOrg/biosig-zarr/blob/2.0.0/spec/index.md>
-- The proposed text: <https://github.com/nemarOrg/biosig-zarr/compare/2.0.1...3.0.0-draft.2>
+- The proposed text: <https://github.com/nemarOrg/biosig-zarr/compare/2.0.2...3.0.0-draft.3>
 - NEMAR's store contract and format stability policy: <https://docs.nemar.org/platform/zarr/store-contract/>, <https://docs.nemar.org/platform/zarr/format-stability/>
 - biosigIO: <https://github.com/neuromechanist/biosigio>
 - The gap defect: <https://github.com/neuromechanist/biosigio/issues/180>, <https://github.com/mne-tools/mne-python/issues/13429>
