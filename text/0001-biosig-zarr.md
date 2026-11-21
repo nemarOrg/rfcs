@@ -94,6 +94,11 @@ A format defined by its only implementation cannot be implemented a second time 
 The specification reverses that relation: the specification defines the format, and biosigIO is one exemplar implementation.
 Its text was first published on docs.nemar.org on 2026-11-18, moved to nemarOrg/biosig-zarr without normative change on 2026-11-20, and tagged [`2.0.0`](https://github.com/nemarOrg/biosig-zarr/blob/2.0.0/spec/index.md).
 This RFC is its first public review.
+Since 2026-11-20 the specification is independent of NEMAR:
+the copyright holder of its text is the biosig-zarr contributors, its editor decides under its [`GOVERNANCE.md`](https://github.com/nemarOrg/biosig-zarr/blob/2.0.2/GOVERNANCE.md),
+and NEMAR is where the text was first published and its first implementer ([biosig-zarr Architecture Decision Record 0005](https://github.com/nemarOrg/biosig-zarr/blob/2.0.2/.context/decisions/0005-the-specification-is-independent-of-nemar.md)).
+NEMAR hosts nemarOrg/biosig-zarr and registers the specification's release identifiers as a service, not as ownership;
+it is ready to hand the specification off once it matures, and until then backstops it and guarantees that it continues, while decisions stay with the editor, through RFCs.
 
 ### Version 2 cannot represent time that is not one uniform, continuous axis
 
@@ -507,7 +512,7 @@ NEMAR's profile refuses epoched sources for now, and question 21 asks whether th
 #### The back catalog
 
 - Every version 3 reader MUST read version 2 stores.
-  This is decided (NEMAR, 2026-11-20) and not open for comment; version 1 is expired, and a version 3 reader need not read it.
+  This is decided (the specification's editor, 2026-11-20) and not open for comment; version 1 is expired, and a version 3 reader need not read it.
   A reader treats a version 2 group as `uniform`, starting at 0, with one interval and no declared missing value, and SHOULD tell its user that continuity is not recorded.
 - NEMAR re-converts old stores from their sources through its normal conversion queue, starting with recordings whose source can be discontinuous.
 - A store MUST NOT be changed from version 2 to version 3 by editing its metadata, because that would assert one valid interval without checking the source.
@@ -679,7 +684,7 @@ The format permits more than NEMAR will use, and the table separates the two.
 
 ### The verdict, if accepted
 
-biosig-zarr `format_version` 3, with group kinds, `valid_intervals`, a declared missing value, per-channel `derivation` and source-resolution fields, and with `.bzx` as its single-file form under NEMAR's own packing rules, is adopted as specification release `3.0.0`.
+biosig-zarr `format_version` 3, with group kinds, `valid_intervals`, a declared missing value, per-channel `derivation` and source-resolution fields, and with `.bzx` as its single-file form under its own packing rules, is adopted as specification release `3.0.0`.
 
 ## Who is affected
 
@@ -715,7 +720,8 @@ Arguments that one of these was decided wrongly are still welcome as issues; the
 | A store is not an NWB container and will not be made NWB-conformant; any NWB output is a stateless export. | nemar-cli ADR 0128, Decision. |
 | One package holds one recording. It is an alternative to a data file, not to a dataset. | ADR 0128, Context and Consequences; the specification, "Scope and non-goals". |
 | The license model: specification text under the W3C Software and Document License; schemas, test vectors and code under the Apache License 2.0. | ADR 0128, Consequences; ADR 0131, Decision 1; neuromechanist/biosigio issue 179. |
-| The specification lives in nemarOrg/biosig-zarr, and the `.bzx` packing rules are NEMAR's own, not a dependency on OME-Zarr RFC-9. | nemar-cli ADR 0131, Decisions 1 and 2. |
+| The specification lives in nemarOrg/biosig-zarr, and the `.bzx` packing rules are the specification's own, not a dependency on OME-Zarr RFC-9. | nemar-cli ADR 0131, Decisions 1 and 2. |
+| The specification is independent of NEMAR: the copyright holder of its text is the biosig-zarr contributors, its editor decides under its `GOVERNANCE.md`, NEMAR is the text's origin and its first implementer, and it hosts the specification, registers its release identifiers and guarantees its continuation as a service, without deciding it. | biosig-zarr ADR 0005; release `2.0.2`. |
 | No store's metadata is patched in place; the tag rename arrives through re-conversion. | ADR 0128, "One copy, and how drift is refused"; ADR 0131, Decision 3. |
 
 Two packaging rules that earlier drafts listed here have no decision record, so they are open for comment with the rest of the proposal (question 8):
@@ -806,12 +812,12 @@ We ask for comment on whether its reasoning is fair and current, and on what an 
 [OME-Zarr RFC-9](https://ngff.openmicroscopy.org/rfc/9/) proposes a zipped form of OME-Zarr with the suffix `.ozx`.
 We credit it as prior art for `.bzx`, not as a dependency (nemar-cli ADR 0131).
 
-Our packing rules are our own text, and they do not follow later changes to RFC-9.
+The packing rules are the specification's own text, and they do not follow later changes to RFC-9.
 We see that independence as an advantage.
 RFC-9 was at stage R4 ("authors reply to reviews"), not accepted, when checked on 2026-11-20 (its source front matter reads `manual_status: R4`), and it phrases most of its rules as recommendations.
 A format that people archive data in needs fixed rules on a known date, and requirements a validator can test.
 If RFC-9 changes, a `.bzx` file written today stays valid.
-The cost is that NEMAR owns every future change to the packing rules, with nobody upstream to share the work.
+The cost is that the specification carries every future change to the packing rules itself, with nobody upstream to share the work.
 
 The RFC-9 column below was checked against RFC-9's source on 2026-11-20.
 
@@ -916,7 +922,8 @@ A short answer with a real file behind it is worth more than a long one without.
 
 We write these criteria before comments open, so they cannot be fitted to the comments.
 Who decides, the window and the clock are in [`PROCESS.md`](../PROCESS.md):
-the owner of the NEMAR platform decides, the window is 21 days measured to the minute from `opened_at` in Coordinated Universal Time (UTC), and the opening post prints the exact close.
+the specification's editor decides, as its [`GOVERNANCE.md`](https://github.com/nemarOrg/biosig-zarr/blob/2.0.2/GOVERNANCE.md) says, and is today also the owner who decides an organization RFC under `PROCESS.md`;
+the window is 21 days measured to the minute from `opened_at` in Coordinated Universal Time (UTC), and the opening post prints the exact close.
 One extension of at most 14 days may be granted before the close, with a stated reason, so the window is never longer than 35 days.
 Every comment gets a written disposition before the decision.
 
@@ -971,6 +978,7 @@ The dates come from the Git history and release tags of biosigIO and from NEMAR'
 | 2, grown by addition | 2026-07-07 to 2026-10-05 | New attributes with no version change: the count of replaced non-finite samples (biosigIO 1.2.1, 2026-07-07); the declared view pyramid and chunk geometry (1.2.6, 2026-09-02); unit handling from BIDS `channels.tsv` (1.2.7, 2026-09-02); the subject-information exclusion mark (1.2.11, 2026-10-05). | The specification, "What changes the version"; biosigIO release tags. |
 | 2, specified | 2026-11-18 | No change to stores. The layout was written down as a specification that implementations follow, named `biosig-zarr`, with `.bzx` proposed. | nemar-cli ADR 0128 (accepted 2026-11-18); the pre-beta specification on docs.nemar.org (nemarOrg/docs pull request 122). |
 | 2, moved | 2026-11-20 | No change to stores or to the text. The text moved to nemarOrg/biosig-zarr and was released as `2.0.0`. | nemar-cli ADR 0131; nemarOrg/biosig-zarr release `2.0.0`. |
+| 2, independent | 2026-11-20 | No change to stores or to the text. The specification became independent of NEMAR, with the biosig-zarr contributors as the copyright holder, and was released as `2.0.2`. | biosig-zarr ADR 0005; release `2.0.2`. |
 | 3 (proposed) | This RFC | The time model (group kinds, `valid_intervals`, `missing_value`, `start_time`) and source resolution (`source_*` fields, `derivation`). | This document; tag `3.0.0-draft.3` when it opens, `3.0.0` only if accepted. |
 
 NEMAR decisions that shaped how stores are made, each an accepted nemar-cli ADR:
@@ -1014,3 +1022,4 @@ That date is also the earliest we can show that NEMAR served stores; earlier con
 ## Change log
 
 - 2026-11-20: first draft, revised after an internal review the same day.
+- 2026-11-21: points at `3.0.0-draft.3`, compared against `2.0.2`, and states that the specification is independent of NEMAR since 2026-11-20 (biosig-zarr ADR 0005).
