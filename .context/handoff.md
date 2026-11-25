@@ -6,7 +6,7 @@ Observations learned along the way are in [`.memory/`](../.memory/README.md), on
 
 ## Update 2026-11-25: RFC-0001 opens Monday 2026-11-30
 
-The owner moved the opening (step O5) from Monday 2026-11-23 to Monday 2026-11-30, about 09:00 PST (17:00 UTC), so that everything is running and people are back from the holiday.
+The owner moved the opening (step O5) from Monday 2026-11-23 to Monday 2026-11-30, about 09:00 Pacific Standard Time (PST), 17:00 Coordinated Universal Time (UTC), so that everything is running and people are back from the holiday.
 Opened at 17:00 UTC, it closes Monday 2026-12-21 at 17:00 UTC; the one extension of at most 14 days would end Monday 2027-01-04.
 
 Both conditions below are met:
@@ -16,10 +16,14 @@ Re-checked on 2026-11-25: rfcs#2 is still a draft at `b6bbb3cd`, the tag `rfc-00
 The admin command tree (nemar-cli epic #2307, not yet released) leaves `nemar admin notify` and `nemar admin notice` where they are, so the owner's commands hold either way.
 
 The owner's commands for the day are in nemar-cli `feature/rfc-program`, `.context/rfc-program/owner/announce-0001/monday.md`, updated for 2026-11-30.
-`dev` was merged into `feature/rfc-program` on 2026-11-25 (ADR index and weekly-report test conflicts resolved), and A3 (nemarOrg/nemar-cli#2277) is unblocked, because ADR 0132 is on `dev`.
-The program branch goes to `dev` after A3, with the owner's say-so of 2026-11-25.
+`dev` was merged into `feature/rfc-program` on 2026-11-25 (Architecture Decision Record (ADR) index and weekly-report test conflicts resolved).
+A3 (nemarOrg/nemar-cli#2277, ADR 0133) merged into `feature/rfc-program` the same day, after its review.
+The program branch goes to `dev` in nemarOrg/nemar-cli#2360, with the owner's say-so of 2026-11-25.
 
-## Where things stand
+## Where things stood on 2026-11-21
+
+The update above supersedes this section where they differ.
+
 
 Every program step before the opening of RFC-0001 is done, reviewed and merged.
 The RFC text is ready: draft pull request [nemarOrg/rfcs#2](https://github.com/nemarOrg/rfcs/pull/2), branch `rfc/0001-biosig-zarr`, head `b6bbb3cddca8f49fc59b98ca130e72eaf1cca4eb`.
@@ -57,7 +61,7 @@ The owner opens it with the three steps in nemar-cli's `plan.md`, section 5, "O5
 
 | Step | What | Waits on |
 |---|---|---|
-| A3 | Architecture Decision Record (ADR) amending nemar-cli ADR 0124 (conformance vectors canonical in biosig-zarr), worktree `rfc-A3` | ADR 0132 reaching nemar-cli `dev` with the mail epic; then merge `dev` into the epic branch and review A3 |
+| A3 | ADR amending nemar-cli ADR 0124 (conformance vectors canonical in biosig-zarr) | Done 2026-11-25: merged into `feature/rfc-program` as ADR 0133 (nemarOrg/nemar-cli#2277) |
 | C3 | Checkpoint: decision draft and follow-through outline | RFC-0001's close instant (21 days after `opened_at`) |
 | V2 | RFC-0002 text (card outline; the lead completes it at C2) | Q16, "For RFC-0002, what does first party mean?", due 2027-01-15 |
 | O6 | Owner opens RFC-0002 | C3; one RFC open at a time |
