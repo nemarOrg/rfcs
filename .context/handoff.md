@@ -4,6 +4,21 @@ Written 2026-11-21 by the manager of NEMAR's Request for Comments (RFC) program 
 Resume in a fresh session from this repository, `/Users/yahya/Documents/git/nemar/rfcs`, not from a worktree.
 Observations learned along the way are in [`.memory/`](../.memory/README.md), one per file.
 
+## Update 2026-11-25: RFC-0001 opens Monday 2026-11-30
+
+The owner moved the opening (step O5) from Monday 2026-11-23 to Monday 2026-11-30, about 09:00 PST (17:00 UTC), so that everything is running and people are back from the holiday.
+Opened at 17:00 UTC, it closes Monday 2026-12-21 at 17:00 UTC; the one extension of at most 14 days would end Monday 2027-01-04.
+
+Both conditions below are met:
+the mail epic (nemarOrg/nemar-cli#2260) is closed and in production (pull request #2293 is on `main`, production reports 0.10.39),
+and the owner has said go for 2026-11-30.
+Re-checked on 2026-11-25: rfcs#2 is still a draft at `b6bbb3cd`, the tag `rfc-0001-evidence` still resolves to `c48405fe`, and `rfc-clock` runs green every day.
+The admin command tree (nemar-cli epic #2307, not yet released) leaves `nemar admin notify` and `nemar admin notice` where they are, so the owner's commands hold either way.
+
+The owner's commands for the day are in nemar-cli `feature/rfc-program`, `.context/rfc-program/owner/announce-0001/monday.md`, updated for 2026-11-30.
+`dev` was merged into `feature/rfc-program` on 2026-11-25 (ADR index and weekly-report test conflicts resolved), and A3 (nemarOrg/nemar-cli#2277) is unblocked, because ADR 0132 is on `dev`.
+The program branch goes to `dev` after A3, with the owner's say-so of 2026-11-25.
+
 ## Where things stand
 
 Every program step before the opening of RFC-0001 is done, reviewed and merged.
